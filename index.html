@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="ML Hyperparameter Mind Map — visualize and manage experiment hyperparameters as an interactive tree." />
+  <title>ML Hyperparameter Mind Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- Toolbar -->
+  <header id="toolbar">
+    <div class="toolbar-left">
+      <h1 class="app-title">
+        <span class="icon">🧠</span> HyperTree
+      </h1>
+    </div>
+    <div class="toolbar-center">
+      <button id="btn-add-root" class="toolbar-btn primary">
+        <span class="btn-icon">＋</span> Add Root Node
+      </button>
+      <div class="toolbar-divider"></div>
+      <button id="btn-save-file" class="toolbar-btn" title="Save tree to JSON file">
+        <span class="btn-icon">💾</span> Save
+      </button>
+      <button id="btn-open-file" class="toolbar-btn" title="Open tree from JSON file">
+        <span class="btn-icon">📂</span> Open
+      </button>
+      <div class="toolbar-divider"></div>
+      <button id="btn-export" class="toolbar-btn">
+        <span class="btn-icon">📷</span> Export PNG
+      </button>
+      <div class="toolbar-divider"></div>
+      <button id="btn-show-sidebar" class="toolbar-btn" title="Toggle parameter sidebar">
+        <span class="btn-icon">📦</span> Params
+      </button>
+      <div class="toolbar-divider"></div>
+      <a href="/dashboard.html" class="toolbar-btn" title="Open experiment dashboard">
+        <span class="btn-icon">📊</span> Dashboard
+      </a>
+    </div>
+    <div class="toolbar-right">
+      <button id="btn-theme" class="toolbar-btn small" title="Toggle theme">
+        <span class="btn-icon">☀️</span> Light
+      </button>
+      <div class="toolbar-divider"></div>
+      <button id="btn-zoom-in" class="toolbar-btn small" title="Zoom In">＋</button>
+      <span id="zoom-level" class="zoom-label">100%</span>
+      <button id="btn-zoom-out" class="toolbar-btn small" title="Zoom Out">−</button>
+      <button id="btn-zoom-reset" class="toolbar-btn small" title="Reset Zoom">⟲</button>
+    </div>
+  </header>
+
+  <!-- Canvas -->
+  <main id="canvas-wrapper">
+    <div id="canvas">
+      <svg id="connections" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="tree-container"></div>
+    </div>
+    <!-- Empty state -->
+    <div id="empty-state">
+      <div class="empty-icon">🌳</div>
+      <p>No experiments yet.</p>
+      <p class="sub">Click <strong>"+ Add Root Node"</strong> to start building your hyperparameter tree.</p>
+    </div>
+
+    <!-- Parameter Sidebar -->
+    <aside id="param-sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">📦 Parameters</span>
+        <button id="btn-toggle-sidebar" class="sidebar-close-btn" title="Toggle sidebar">✕</button>
+      </div>
+      <div class="sidebar-body">
+        <div class="sidebar-hint">Drag items onto node cards</div>
+        <div id="param-list" class="sidebar-list"></div>
+        <div class="sidebar-add">
+          <input id="sidebar-add-input" type="text" placeholder="Custom param..." />
+          <button id="sidebar-add-btn" class="sidebar-add-btn">＋</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Modal backdrop -->
+  <div id="modal-backdrop" class="hidden"></div>
+  <div id="modal" class="hidden"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
