@@ -35,6 +35,7 @@
   --shadow-card: rgba(0, 0, 0, 0.3);
   --shadow-card-hover: rgba(0, 0, 0, 0.4);
   --connection-stroke: rgba(99, 179, 237, 0.3);
+  --secondary-stroke: rgba(167, 139, 250, 0.5);
   --header-bg: rgba(255, 255, 255, 0.03);
   --actions-bg: rgba(0, 0, 0, 0.15);
   --btn-hover-bg: rgba(255, 255, 255, 0.08);
@@ -75,6 +76,7 @@
   --shadow-card: rgba(0, 0, 0, 0.08);
   --shadow-card-hover: rgba(0, 0, 0, 0.14);
   --connection-stroke: rgba(59, 130, 246, 0.3);
+  --secondary-stroke: rgba(139, 92, 246, 0.5);
   --header-bg: rgba(0, 0, 0, 0.02);
   --actions-bg: rgba(0, 0, 0, 0.04);
   --btn-hover-bg: rgba(0, 0, 0, 0.06);
@@ -252,6 +254,14 @@ html, body {
   stroke: var(--connection-stroke);
   stroke-width: 2;
   stroke-linecap: round;
+}
+
+.connection-line-secondary {
+  fill: none;
+  stroke: var(--secondary-stroke);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 8 4;
 }
 
 /* ─── Empty State ─────────────────────────────────────── */

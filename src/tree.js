@@ -1,5 +1,5 @@
 import { renderNodeCard } from './node.js';
-import { updateNode, save, getRoots, getEffectiveParams } from './store.js';
+import { updateNode, save, getRoots, getEffectiveParams, getNode } from './store.js';
 
 // Soft, dashboard-matching color palette for shared params
 const PARAM_COLORS = [
@@ -348,6 +348,7 @@ function drawAllConnections(roots) {
   svg.innerHTML = '';
   const canvasRect = canvas.getBoundingClientRect();
   roots.forEach((root) => drawNodeConnections(root, canvasRect));
+  drawSecondaryConnections(roots, canvasRect);
 }
 
 function drawNodeConnections(node, canvasRect) {
@@ -391,4 +392,37 @@ function animateConnectionsDuringDrag() {
   const roots = getRoots();
   drawAllConnections(roots);
   requestAnimationFrame(animateConnectionsDuringDrag);
+}
+
+// ─── Secondary Parent Connections (dashed, different color) ─
+
+function drawSecondaryConnections(roots, canvasRect) {
+  const allNodes = flattenAllNodes(roots);
+
+  for (const node of allNodes) {
+    if (!node.secondaryParentIds || node.secondaryParentIds.length === 0) continue;
+
+    const childCard = document.querySelector(`.node-card[data-id="${node.id}"]`);
+    if (!childCard) continue;
+
+    for (const spId of node.secondaryParentIds) {
+      const spCard = document.querySelector(`.node-card[data-id="${spId}"]`);
+      if (!spCard) continue;
+
+      const parentRect = spCard.getBoundingClientRect();
+      const childRect = childCard.getBoundingClientRect();
+
+      const x1 = (parentRect.left + parentRect.width / 2 - canvasRect.left) / scale;
+      const y1 = (parentRect.bottom - canvasRect.top) / scale;
+      const x2 = (childRect.left + childRect.width / 2 - canvasRect.left) / scale;
+      const y2 = (childRect.top - canvasRect.top) / scale;
+
+      const midY = (y1 + y2) / 2;
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`);
+      path.setAttribute('class', 'connection-line-secondary');
+      svg.appendChild(path);
+    }
+  }
 }
