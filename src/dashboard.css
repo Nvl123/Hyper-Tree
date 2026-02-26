@@ -491,6 +491,12 @@ html, body {
   font-weight: 700;
 }
 
+.metric-best span {
+  background: linear-gradient(transparent 50%, var(--gold-border) 50%);
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
 .metric-second {
   color: var(--silver) !important;
   font-weight: 600;

@@ -478,7 +478,11 @@ function renderTable(experiments, activeMetrics, labels) {
       const td = document.createElement('td');
       const rawVal = exp.results[metric];
       const num = parseFloat(rawVal);
-      td.textContent = !isNaN(num) ? num.toFixed(4) : (rawVal || '—');
+      const displayVal = !isNaN(num) ? num.toFixed(4) : (rawVal || '—');
+      
+      const valSpan = document.createElement('span');
+      valSpan.textContent = displayVal;
+      td.appendChild(valSpan);
 
       const metricRank = rankings[metric][idx];
       if (metricRank === 0) td.classList.add('metric-best');
