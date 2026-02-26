@@ -140,7 +140,13 @@ export function getEffectiveParams(id) {
     }
   }
 
-  return merged;
+  // Remove tombstones (keys explicitly deleted in child)
+  const finalMerged = {};
+  for (const [k, v] of Object.entries(merged)) {
+    if (v !== null) finalMerged[k] = v;
+  }
+
+  return finalMerged;
 }
 
 export function getOverriddenKeys(id) {

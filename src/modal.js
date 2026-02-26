@@ -310,7 +310,7 @@ export function openEditModal(nodeId) {
       }
 
       warningMsg.classList.add('hidden');
-      const result = collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, currentParentId, secChecklist);
+      const result = collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, currentParentId, secChecklist, initialKeys);
       closeModal(result);
     });
 
@@ -370,14 +370,15 @@ function createParamRow(key, value, isEditable, isRoot) {
   tdVal.appendChild(valInput);
 
   const tdAction = document.createElement('td');
-  if (isEditable || isRoot) {
-    const delBtn = document.createElement('button');
-    delBtn.className = 'param-del-btn';
-    delBtn.textContent = '✕';
-    delBtn.title = 'Remove parameter';
-    delBtn.addEventListener('click', () => tr.remove());
-    tdAction.appendChild(delBtn);
-  }
+  const delBtn = document.createElement('button');
+  delBtn.className = 'param-del-btn';
+  delBtn.textContent = '✕';
+  delBtn.title = 'Remove parameter';
+  delBtn.addEventListener('click', () => {
+    tr.remove();
+    // If it was readOnly and we delete it, it essentially becomes overridden with a tombstone
+  });
+  tdAction.appendChild(delBtn);
 
   tr.appendChild(tdKey);
   tr.appendChild(tdVal);
@@ -386,9 +387,10 @@ function createParamRow(key, value, isEditable, isRoot) {
   return tr;
 }
 
-function collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, originalParentId, secChecklist) {
+function collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, originalParentId, secChecklist, initialKeys = new Set()) {
   const overrides = {};
   const rows = tbody.querySelectorAll('tr');
+  const presentKeys = new Set();
 
   rows.forEach((row) => {
     const keyEl = row.querySelector('.param-key-input');
@@ -399,10 +401,19 @@ function collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, or
     const val = valEl.value.trim();
     if (!key) return;
 
+    presentKeys.add(key);
+
     // If row is overridden (editable) or is root, include it
-    const isOverridden = row.classList.contains('modal-row-overridden');
+    const isOverridden = row.classList.contains('modal-row-overridden') || !valEl.readOnly;
     if (isOverridden || isRoot) {
       overrides[key] = val;
+    }
+  });
+
+  // Tombstones for deleted inherited parameters
+  initialKeys.forEach(key => {
+    if (!presentKeys.has(key)) {
+      overrides[key] = null; // Mark as explicitly deleted
     }
   });
 
