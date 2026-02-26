@@ -173,6 +173,13 @@ html, body {
   border-color: var(--border-glow);
 }
 
+.toolbar-btn.active {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
 .toolbar-btn.small {
   padding: 6px 10px;
   font-size: 13px;

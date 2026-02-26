@@ -25,6 +25,10 @@
       <button id="btn-open-file" class="toolbar-btn" title="Open tree from JSON file">
         <span class="btn-icon">📂</span> Load Data
       </button>
+      <div class="toolbar-divider"></div>
+      <button id="btn-loss-acc" class="toolbar-btn" title="Toggle Loss & Accuracy view">
+        <span class="btn-icon">📉</span> Loss & Acc
+      </button>
     </div>
     <div class="toolbar-right">
       <button id="btn-theme" class="toolbar-btn small" title="Toggle theme">
@@ -54,7 +58,7 @@
       <div class="dashboard-content-area">
         <!-- Results Table -->
         <section class="dashboard-section">
-          <h2 class="section-title">🏆 Experiment Results</h2>
+          <h2 class="section-title" id="title-results">🏆 Experiment Results</h2>
           <div class="table-scroll">
             <table id="results-table" class="results-table">
               <thead></thead>
@@ -67,7 +71,7 @@
         <div class="charts-row">
           <!-- Line Chart -->
           <section class="dashboard-section chart-section">
-            <h2 class="section-title">📈 Metrics Comparison (Line Chart)</h2>
+            <h2 class="section-title" id="title-chart-1">📈 Metrics Comparison (Line Chart)</h2>
             <div class="chart-container">
               <canvas id="line-chart"></canvas>
             </div>
@@ -75,7 +79,7 @@
 
           <!-- Radar Chart -->
           <section class="dashboard-section chart-section">
-            <h2 class="section-title">🕸️ Experiment Profiles (Radar Chart)</h2>
+            <h2 class="section-title" id="title-chart-2">🕸️ Experiment Profiles (Radar Chart)</h2>
             <div class="chart-container">
               <canvas id="radar-chart"></canvas>
             </div>
@@ -85,7 +89,7 @@
         <!-- Bar Chart Row -->
         <div class="charts-row">
           <section class="dashboard-section chart-section">
-            <h2 class="section-title">📊 Per-Metric Ranking (Grouped Bar Chart)</h2>
+            <h2 class="section-title" id="title-chart-3">📊 Per-Metric Ranking (Grouped Bar Chart)</h2>
             <div class="chart-container chart-container-wide">
               <canvas id="bar-chart"></canvas>
             </div>

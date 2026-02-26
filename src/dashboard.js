@@ -4,6 +4,7 @@ import {
   LineController,
   BarController,
   RadarController,
+  ScatterController,
   LineElement,
   BarElement,
   PointElement,
@@ -17,7 +18,7 @@ import {
 } from 'chart.js';
 
 Chart.register(
-  LineController, BarController, RadarController,
+  LineController, BarController, RadarController, ScatterController,
   LineElement, BarElement, PointElement,
   RadialLinearScale, CategoryScale, LinearScale,
   Filler, Legend, Tooltip, Title
@@ -31,6 +32,14 @@ const METRIC_LABELS = {
   meteor: 'METEOR', rouge_l: 'ROUGE-L', cider: 'CIDEr', spice: 'SPICE',
 };
 
+const LOSS_ACC_METRICS = ['loss', 'accuracy'];
+const LOSS_ACC_LABELS = {
+  loss: 'Loss', accuracy: 'Accuracy',
+};
+
+// Metrics where lower is better (used for ranking)
+const LOWER_IS_BETTER = new Set(['loss']);
+
 const CHART_COLORS = [
   '#63b3ed', '#a78bfa', '#f687b3', '#68d391', '#fbd38d',
   '#fc8181', '#76e4f7', '#f6ad55', '#9ae6b4', '#b794f4',
@@ -43,8 +52,10 @@ let lineChart = null, radarChart = null, barChart = null;
 let allExperiments = [];
 let selectedIds = new Set();
 let selectedMetrics = new Set(METRICS);
+let selectedLAMetrics = new Set(LOSS_ACC_METRICS);
 let sortMetric = '';
 let sortDir = 'desc';
+let viewMode = 'eval'; // 'eval' or 'lossacc'
 
 // ─── Init ────────────────────────────────────────────────
 
@@ -87,6 +98,17 @@ function setupToolbar() {
       initExperiments(data);
       refreshDashboard();
     }
+  });
+
+  // Loss & Acc toggle
+  const lossAccBtn = document.getElementById('btn-loss-acc');
+  lossAccBtn.addEventListener('click', () => {
+    viewMode = viewMode === 'eval' ? 'lossacc' : 'eval';
+    lossAccBtn.classList.toggle('active', viewMode === 'lossacc');
+    sortMetric = '';
+    sortDir = 'desc';
+    buildFilters();
+    refreshDashboard();
   });
 
   // Smooth page transition for back link
@@ -167,6 +189,7 @@ function initExperiments(data) {
   allExperiments = allNodes.filter(n => n.results && Object.keys(n.results).length > 0);
   selectedIds = new Set(allExperiments.map(e => e.id));
   selectedMetrics = new Set(METRICS);
+  selectedLAMetrics = new Set(LOSS_ACC_METRICS);
   sortMetric = '';
   sortDir = 'desc';
   buildFilters();
@@ -248,36 +271,40 @@ function buildFilters() {
   expSection.appendChild(expList);
   container.appendChild(expSection);
 
-  // — Metric selection —
+  // — Metric selection (dynamic based on viewMode) —
+  const currentMetricsList = viewMode === 'lossacc' ? LOSS_ACC_METRICS : METRICS;
+  const currentMetricLabels = viewMode === 'lossacc' ? LOSS_ACC_LABELS : METRIC_LABELS;
+  const currentSelectedMetrics = viewMode === 'lossacc' ? selectedLAMetrics : selectedMetrics;
+
   const metSection = document.createElement('div');
   metSection.className = 'filter-group';
 
   const metTitle = document.createElement('div');
   metTitle.className = 'filter-title';
-  metTitle.textContent = '📏 Metrics';
+  metTitle.textContent = viewMode === 'lossacc' ? '📉 Loss & Acc Metrics' : '📏 Metrics';
   metSection.appendChild(metTitle);
 
   const metList = document.createElement('div');
   metList.className = 'filter-checklist';
   metList.id = 'metric-checklist';
 
-  METRICS.forEach((m) => {
+  currentMetricsList.forEach((m) => {
     const label = document.createElement('label');
     label.className = 'filter-check-item';
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
-    checkbox.checked = selectedMetrics.has(m);
+    checkbox.checked = currentSelectedMetrics.has(m);
     checkbox.dataset.metric = m;
     checkbox.addEventListener('change', () => {
-      if (checkbox.checked) selectedMetrics.add(m);
-      else selectedMetrics.delete(m);
+      if (checkbox.checked) currentSelectedMetrics.add(m);
+      else currentSelectedMetrics.delete(m);
       refreshDashboard();
     });
 
     const text = document.createElement('span');
     text.className = 'filter-check-label';
-    text.textContent = METRIC_LABELS[m];
+    text.textContent = currentMetricLabels[m];
 
     label.appendChild(checkbox);
     label.appendChild(text);
@@ -299,7 +326,7 @@ function buildFilters() {
   const sortSelect = document.createElement('select');
   sortSelect.className = 'filter-select';
   sortSelect.innerHTML = `<option value="">Overall Rank</option>` +
-    METRICS.map(m => `<option value="${m}" ${sortMetric === m ? 'selected' : ''}>${METRIC_LABELS[m]}</option>`).join('');
+    currentMetricsList.map(m => `<option value="${m}" ${sortMetric === m ? 'selected' : ''}>${currentMetricLabels[m]}</option>`).join('');
   sortSelect.addEventListener('change', () => {
     sortMetric = sortSelect.value;
     refreshDashboard();
@@ -327,9 +354,39 @@ function updateCheckboxes() {
 
 // ─── Refresh Dashboard ───────────────────────────────────
 
+function getActiveMetricsList() {
+  if (viewMode === 'lossacc') {
+    return LOSS_ACC_METRICS.filter(m => selectedLAMetrics.has(m));
+  }
+  return METRICS.filter(m => selectedMetrics.has(m));
+}
+
+function getActiveMetricLabels() {
+  return viewMode === 'lossacc' ? LOSS_ACC_LABELS : METRIC_LABELS;
+}
+
+function updateSectionTitles() {
+  const t1 = document.getElementById('title-chart-1');
+  const t2 = document.getElementById('title-chart-2');
+  const t3 = document.getElementById('title-chart-3');
+  const tRes = document.getElementById('title-results');
+
+  if (viewMode === 'lossacc') {
+    tRes.textContent = '📉 Loss & Accuracy Results';
+    t1.textContent = '📉 Loss Comparison (Lower is Better)';
+    t2.textContent = '🎯 Accuracy Comparison (Higher is Better)';
+    t3.textContent = '🔬 Loss vs Accuracy Trade-off (Scatter)';
+  } else {
+    tRes.textContent = '🏆 Experiment Results';
+    t1.textContent = '📈 Metrics Comparison (Line Chart)';
+    t2.textContent = '🕸️ Experiment Profiles (Radar Chart)';
+    t3.textContent = '📊 Per-Metric Ranking (Grouped Bar Chart)';
+  }
+}
+
 function refreshDashboard() {
   const filtered = allExperiments.filter(e => selectedIds.has(e.id));
-  const activeMetrics = METRICS.filter(m => selectedMetrics.has(m));
+  const activeMetrics = getActiveMetricsList();
 
   if (filtered.length === 0 || activeMetrics.length === 0) {
     document.getElementById('dashboard-empty').classList.remove('hidden');
@@ -340,30 +397,40 @@ function refreshDashboard() {
   document.getElementById('dashboard-empty').classList.add('hidden');
   document.getElementById('dashboard-main').classList.remove('hidden');
 
-  renderTable(filtered, activeMetrics);
-  renderLineChart(filtered, activeMetrics);
-  renderRadarChart(filtered, activeMetrics);
-  renderBarChart(filtered, activeMetrics);
+  updateSectionTitles();
+
+  const labels = getActiveMetricLabels();
+  renderTable(filtered, activeMetrics, labels);
+
+  if (viewMode === 'lossacc') {
+    renderLossBarChart(filtered);
+    renderAccuracyBarChart(filtered);
+    renderLossAccScatter(filtered);
+  } else {
+    renderLineChart(filtered, activeMetrics, labels);
+    renderRadarChart(filtered, activeMetrics, labels);
+    renderBarChart(filtered, activeMetrics, labels);
+  }
 }
 
 // ─── Results Table with Gold/Silver/Bronze ───────────────
 
-function renderTable(experiments, activeMetrics) {
+function renderTable(experiments, activeMetrics, labels) {
   const thead = document.querySelector('#results-table thead');
   const tbody = document.querySelector('#results-table tbody');
 
   thead.innerHTML = `<tr>
     <th class="rank-col">#</th>
     <th>Experiment</th>
-    ${activeMetrics.map(m => `<th>${METRIC_LABELS[m]}</th>`).join('')}
+    ${activeMetrics.map(m => `<th>${labels[m]}</th>`).join('')}
   </tr>`;
 
-  // Rankings per metric
+  // Rankings per metric (lower is better for loss, higher for others)
   const rankings = {};
   activeMetrics.forEach((metric) => {
     const sorted = experiments
       .map((exp, idx) => ({ idx, val: parseFloat(exp.results[metric]) || 0 }))
-      .sort((a, b) => b.val - a.val);
+      .sort((a, b) => LOWER_IS_BETTER.has(metric) ? a.val - b.val : b.val - a.val);
     rankings[metric] = {};
     sorted.forEach((entry, rank) => { rankings[metric][entry.idx] = rank; });
   });
@@ -427,7 +494,7 @@ function renderTable(experiments, activeMetrics) {
 
 // ─── Line Chart ──────────────────────────────────────────
 
-function renderLineChart(experiments, activeMetrics) {
+function renderLineChart(experiments, activeMetrics, labels) {
   const ctx = document.getElementById('line-chart');
   if (lineChart) lineChart.destroy();
 
@@ -458,7 +525,7 @@ function renderLineChart(experiments, activeMetrics) {
   lineChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: activeMetrics.map(m => METRIC_LABELS[m]),
+      labels: activeMetrics.map(m => labels[m]),
       datasets,
     },
     options: {
@@ -508,7 +575,7 @@ function renderLineChart(experiments, activeMetrics) {
 
 // ─── Radar Chart ─────────────────────────────────────────
 
-function renderRadarChart(experiments, activeMetrics) {
+function renderRadarChart(experiments, activeMetrics, labels) {
   const ctx = document.getElementById('radar-chart');
   if (radarChart) radarChart.destroy();
 
@@ -535,7 +602,7 @@ function renderRadarChart(experiments, activeMetrics) {
   radarChart = new Chart(ctx, {
     type: 'radar',
     data: {
-      labels: activeMetrics.map(m => METRIC_LABELS[m]),
+      labels: activeMetrics.map(m => labels[m]),
       datasets,
     },
     options: {
@@ -568,7 +635,7 @@ function renderRadarChart(experiments, activeMetrics) {
 
 // ─── Grouped Bar Chart ───────────────────────────────────
 
-function renderBarChart(experiments, activeMetrics) {
+function renderBarChart(experiments, activeMetrics, labels) {
   const ctx = document.getElementById('bar-chart');
   if (barChart) barChart.destroy();
 
@@ -593,7 +660,7 @@ function renderBarChart(experiments, activeMetrics) {
   barChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: activeMetrics.map(m => METRIC_LABELS[m]),
+      labels: activeMetrics.map(m => labels[m]),
       datasets,
     },
     options: {
@@ -633,6 +700,293 @@ function renderBarChart(experiments, activeMetrics) {
           grid: { color: gridColor },
           ticks: { color: textColor, font: { family: 'Inter', size: 11 } },
           beginAtZero: true,
+        },
+      },
+    },
+  });
+}
+
+// ─── Loss & Accuracy Specialized Charts ──────────────────
+
+function getLAChartColors(isDark) {
+  return {
+    gridColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+    textColor: isDark ? '#94a3b8' : '#475569',
+    tooltipBg: isDark ? 'rgba(24,27,37,0.95)' : 'rgba(255,255,255,0.95)',
+    tooltipTitle: isDark ? '#e2e8f0' : '#1e293b',
+    tooltipBody: isDark ? '#94a3b8' : '#475569',
+    tooltipBorder: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+    pointBorder: isDark ? '#1a1b2e' : '#ffffff',
+  };
+}
+
+// ─── Loss Bar Chart (Lower = Better) ──────────────────────
+
+function renderLossBarChart(experiments) {
+  const ctx = document.getElementById('line-chart');
+  if (lineChart) lineChart.destroy();
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const c = getLAChartColors(isDark);
+
+  // Sort experiments by loss ascending (best first)
+  const sorted = experiments
+    .map((exp) => ({
+      name: exp.name,
+      loss: parseFloat(exp.results.loss) || 0,
+      id: exp.id,
+    }))
+    .sort((a, b) => a.loss - b.loss);
+
+  // Color gradient: green (low loss) → red (high loss)
+  const maxLoss = Math.max(...sorted.map(s => s.loss), 0.01);
+  const barColors = sorted.map(s => {
+    const ratio = s.loss / maxLoss;
+    const r = Math.round(50 + 200 * ratio);
+    const g = Math.round(200 - 150 * ratio);
+    return `rgba(${r}, ${g}, 80, 0.85)`;
+  });
+  const borderColors = sorted.map(s => {
+    const ratio = s.loss / maxLoss;
+    const r = Math.round(50 + 200 * ratio);
+    const g = Math.round(200 - 150 * ratio);
+    return `rgb(${r}, ${g}, 80)`;
+  });
+
+  lineChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(s => s.name),
+      datasets: [{
+        label: 'Loss',
+        data: sorted.map(s => s.loss),
+        backgroundColor: barColors,
+        borderColor: borderColors,
+        borderWidth: 1.5,
+        borderRadius: 6,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: c.tooltipBg,
+          titleColor: c.tooltipTitle,
+          bodyColor: c.tooltipBody,
+          borderColor: c.tooltipBorder,
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 8,
+          titleFont: { family: 'Inter', weight: '600' },
+          bodyFont: { family: 'Inter' },
+          callbacks: {
+            label: (ctx) => `Loss: ${ctx.parsed.x.toFixed(4)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: c.gridColor },
+          ticks: { color: c.textColor, font: { family: 'Inter', size: 11 } },
+          title: {
+            display: true,
+            text: 'Loss (lower is better →)',
+            color: c.textColor,
+            font: { family: 'Inter', size: 12, weight: '600' },
+          },
+          beginAtZero: true,
+        },
+        y: {
+          grid: { color: c.gridColor },
+          ticks: { color: c.textColor, font: { family: 'Inter', size: 11, weight: '500' } },
+        },
+      },
+    },
+  });
+}
+
+// ─── Accuracy Bar Chart (Higher = Better) ─────────────────
+
+function renderAccuracyBarChart(experiments) {
+  const ctx = document.getElementById('radar-chart');
+  if (radarChart) radarChart.destroy();
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const c = getLAChartColors(isDark);
+
+  // Sort experiments by accuracy descending (best first)
+  const sorted = experiments
+    .map((exp) => ({
+      name: exp.name,
+      accuracy: parseFloat(exp.results.accuracy) || 0,
+      id: exp.id,
+    }))
+    .sort((a, b) => b.accuracy - a.accuracy);
+
+  // Color gradient: green (high acc) → orange (low acc)
+  const maxAcc = Math.max(...sorted.map(s => s.accuracy), 0.01);
+  const barColors = sorted.map(s => {
+    const ratio = s.accuracy / maxAcc;
+    const r = Math.round(50 + 180 * (1 - ratio));
+    const g = Math.round(100 + 130 * ratio);
+    const b2 = Math.round(80 + 100 * ratio);
+    return `rgba(${r}, ${g}, ${b2}, 0.85)`;
+  });
+  const borderColors = sorted.map(s => {
+    const ratio = s.accuracy / maxAcc;
+    const r = Math.round(50 + 180 * (1 - ratio));
+    const g = Math.round(100 + 130 * ratio);
+    const b2 = Math.round(80 + 100 * ratio);
+    return `rgb(${r}, ${g}, ${b2})`;
+  });
+
+  radarChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(s => s.name),
+      datasets: [{
+        label: 'Accuracy',
+        data: sorted.map(s => s.accuracy),
+        backgroundColor: barColors,
+        borderColor: borderColors,
+        borderWidth: 1.5,
+        borderRadius: 6,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: c.tooltipBg,
+          titleColor: c.tooltipTitle,
+          bodyColor: c.tooltipBody,
+          borderColor: c.tooltipBorder,
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 8,
+          titleFont: { family: 'Inter', weight: '600' },
+          bodyFont: { family: 'Inter' },
+          callbacks: {
+            label: (ctx) => `Accuracy: ${ctx.parsed.x.toFixed(4)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: c.gridColor },
+          ticks: { color: c.textColor, font: { family: 'Inter', size: 11 } },
+          title: {
+            display: true,
+            text: 'Accuracy (higher is better →)',
+            color: c.textColor,
+            font: { family: 'Inter', size: 12, weight: '600' },
+          },
+          beginAtZero: true,
+          max: 1,
+        },
+        y: {
+          grid: { color: c.gridColor },
+          ticks: { color: c.textColor, font: { family: 'Inter', size: 11, weight: '500' } },
+        },
+      },
+    },
+  });
+}
+
+// ─── Loss vs Accuracy Scatter ─────────────────────────────
+
+function renderLossAccScatter(experiments) {
+  const ctx = document.getElementById('bar-chart');
+  if (barChart) barChart.destroy();
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const c = getLAChartColors(isDark);
+
+  const datasets = experiments.map((exp) => {
+    const origIdx = allExperiments.findIndex(e => e.id === exp.id);
+    const color = CHART_COLORS[(origIdx >= 0 ? origIdx : 0) % CHART_COLORS.length];
+    const loss = parseFloat(exp.results.loss) || 0;
+    const acc = parseFloat(exp.results.accuracy) || 0;
+
+    return {
+      label: exp.name,
+      data: [{ x: loss, y: acc }],
+      backgroundColor: color + 'CC',
+      borderColor: color,
+      borderWidth: 2,
+      pointRadius: 10,
+      pointHoverRadius: 14,
+      pointBorderColor: c.pointBorder,
+      pointBorderWidth: 2,
+    };
+  });
+
+  barChart = new Chart(ctx, {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: c.textColor,
+            font: { family: 'Inter', size: 12, weight: '500' },
+            padding: 16,
+            usePointStyle: true,
+            pointStyle: 'circle',
+          },
+        },
+        tooltip: {
+          backgroundColor: c.tooltipBg,
+          titleColor: c.tooltipTitle,
+          bodyColor: c.tooltipBody,
+          borderColor: c.tooltipBorder,
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 8,
+          titleFont: { family: 'Inter', weight: '600' },
+          bodyFont: { family: 'Inter' },
+          callbacks: {
+            label: (ctx) => {
+              const pt = ctx.parsed;
+              return `${ctx.dataset.label} — Loss: ${pt.x.toFixed(4)}, Acc: ${pt.y.toFixed(4)}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: c.gridColor },
+          ticks: { color: c.textColor, font: { family: 'Inter', size: 11 } },
+          title: {
+            display: true,
+            text: 'Loss ← lower is better',
+            color: c.textColor,
+            font: { family: 'Inter', size: 12, weight: '600' },
+          },
+          beginAtZero: true,
+        },
+        y: {
+          grid: { color: c.gridColor },
+          ticks: { color: c.textColor, font: { family: 'Inter', size: 11 } },
+          title: {
+            display: true,
+            text: 'Accuracy → higher is better',
+            color: c.textColor,
+            font: { family: 'Inter', size: 12, weight: '600' },
+          },
+          beginAtZero: true,
+          max: 1,
         },
       },
     },
