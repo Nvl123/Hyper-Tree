@@ -282,6 +282,8 @@ export function openEditModal(nodeId) {
     saveBtn.className = 'modal-btn save-btn';
     saveBtn.textContent = 'Save';
     saveBtn.addEventListener('click', () => {
+      const initialKeys = new Set(Object.keys(effectiveParams));
+      
       // Validate all result inputs before saving
       const resultInputs = resultsGrid.querySelectorAll('.result-input');
       let hasError = false;
