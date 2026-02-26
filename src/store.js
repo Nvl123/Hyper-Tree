@@ -145,6 +145,29 @@ export function getNodeDepth(id) {
   return Math.max(0, chain.length - 1);
 }
 
+/**
+ * Get all nodes as a flat array.
+ */
+export function getAllNodes() {
+  const list = [];
+  function walk(nodes) {
+    for (const node of nodes) {
+      list.push(node);
+      if (node.children) walk(node.children);
+    }
+  }
+  walk(treeData.roots);
+  return list;
+}
+
+/**
+ * Get the parent of a node (null if root).
+ */
+export function getParentNode(id) {
+  const result = findNodeAndParent(id);
+  return result ? result.parent : null;
+}
+
 // ─── Persistence ─────────────────────────────────────────
 
 export function save() {

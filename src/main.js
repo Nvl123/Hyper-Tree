@@ -102,6 +102,20 @@ async function handleAction(action, nodeId, extra) {
           overrides: result.overrides,
           results: result.results || {},
         });
+        // Handle parent change
+        if (result.newParentId) {
+          if (result.newParentId === '__root__') {
+            // Move to root level
+            const roots = getRoots();
+            const nodeData = removeNode(nodeId, roots);
+            if (nodeData) {
+              roots.push(nodeData);
+              save();
+            }
+          } else {
+            moveNodeTo(nodeId, result.newParentId);
+          }
+        }
         render();
       }
       break;

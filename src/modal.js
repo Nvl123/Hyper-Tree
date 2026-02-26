@@ -1,4 +1,4 @@
-import { getEffectiveParams, getOverriddenKeys, getNode, isRootNode } from './store.js';
+import { getEffectiveParams, getOverriddenKeys, getNode, isRootNode, getAllNodes, getParentNode } from './store.js';
 
 let modalEl, backdropEl;
 let currentResolve = null;
@@ -52,6 +52,43 @@ export function openEditModal(nodeId) {
     nameGroup.appendChild(nameLabel);
     nameGroup.appendChild(nameInput);
     container.appendChild(nameGroup);
+
+    // ── Parent selector ──
+    const parentGroup = document.createElement('div');
+    parentGroup.className = 'form-group';
+    const parentLabel = document.createElement('label');
+    parentLabel.textContent = '📁 Parent Node';
+    const parentSelect = document.createElement('select');
+    parentSelect.className = 'form-input';
+    parentSelect.id = 'modal-parent-select';
+
+    // Build list of possible parents (exclude self & descendants)
+    const currentParent = getParentNode(nodeId);
+    const currentParentId = currentParent ? currentParent.id : '__root__';
+    const descendantIds = getDescendantIds(node);
+
+    // Root option
+    const rootOpt = document.createElement('option');
+    rootOpt.value = '__root__';
+    rootOpt.textContent = '🌲 Root (no parent)';
+    if (currentParentId === '__root__') rootOpt.selected = true;
+    parentSelect.appendChild(rootOpt);
+
+    // All other nodes as potential parents
+    const allNodes = getAllNodes();
+    allNodes.forEach((n) => {
+      if (n.id === nodeId) return;          // skip self
+      if (descendantIds.has(n.id)) return;  // skip descendants
+      const opt = document.createElement('option');
+      opt.value = n.id;
+      opt.textContent = n.name;
+      if (n.id === currentParentId) opt.selected = true;
+      parentSelect.appendChild(opt);
+    });
+
+    parentGroup.appendChild(parentLabel);
+    parentGroup.appendChild(parentSelect);
+    container.appendChild(parentGroup);
 
     // Params section
     const paramTitle = document.createElement('h3');
@@ -222,7 +259,7 @@ export function openEditModal(nodeId) {
       }
 
       warningMsg.classList.add('hidden');
-      const result = collectFormData(nameInput, tbody, isRoot, resultsGrid);
+      const result = collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, currentParentId);
       closeModal(result);
     });
 
@@ -298,7 +335,7 @@ function createParamRow(key, value, isEditable, isRoot) {
   return tr;
 }
 
-function collectFormData(nameInput, tbody, isRoot, resultsGrid) {
+function collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, originalParentId) {
   const overrides = {};
   const rows = tbody.querySelectorAll('tr');
 
@@ -334,6 +371,7 @@ function collectFormData(nameInput, tbody, isRoot, resultsGrid) {
     name: nameInput.value.trim() || 'Untitled',
     overrides,
     results,
+    newParentId: parentSelect.value !== originalParentId ? parentSelect.value : null,
   };
 }
 
@@ -344,4 +382,19 @@ function closeModal(result) {
     currentResolve(result);
     currentResolve = null;
   }
+}
+
+/** Get all descendant IDs of a node (to prevent circular parent assignment) */
+function getDescendantIds(node) {
+  const ids = new Set();
+  function walk(n) {
+    if (n.children) {
+      for (const child of n.children) {
+        ids.add(child.id);
+        walk(child);
+      }
+    }
+  }
+  walk(node);
+  return ids;
 }
