@@ -375,6 +375,54 @@ html, body {
   letter-spacing: 0.5px;
 }
 
+.sec-parent-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--accent-glow);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  flex-shrink: 0;
+  cursor: help;
+}
+
+/* ─── Modal Secondary Parents Checklist ──────────────── */
+.modal-sec-parents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  background: var(--input-focus-bg);
+  margin-top: 4px;
+}
+
+.modal-sec-parents-list .filter-check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: background var(--transition);
+}
+
+.modal-sec-parents-list .filter-check-item:hover {
+  background: var(--btn-hover-bg);
+}
+
+.modal-sec-parents-list input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 /* Inline name editing */
 .inline-name-input {
   font-size: 14px;

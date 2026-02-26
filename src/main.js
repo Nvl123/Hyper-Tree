@@ -101,6 +101,7 @@ async function handleAction(action, nodeId, extra) {
           name: result.name,
           overrides: result.overrides,
           results: result.results || {},
+          secondaryParentIds: result.secondaryParentIds || [],
         });
         // Handle parent change
         if (result.newParentId) {

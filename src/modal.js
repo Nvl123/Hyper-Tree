@@ -90,6 +90,57 @@ export function openEditModal(nodeId) {
     parentGroup.appendChild(parentSelect);
     container.appendChild(parentGroup);
 
+    // ── Secondary Parents (multi-select checklist) ──
+    const secGroup = document.createElement('div');
+    secGroup.className = 'form-group';
+    const secLabel = document.createElement('label');
+    secLabel.textContent = '🔗 Secondary Parents (parameter union)';
+    secGroup.appendChild(secLabel);
+
+    const secHint = document.createElement('div');
+    secHint.className = 'modal-results-hint';
+    secHint.innerHTML = '💡 Parameter dari secondary parents akan di-<strong>union</strong> (digabung). Primary parent menang jika ada key yang sama.';
+    secGroup.appendChild(secHint);
+
+    const secChecklist = document.createElement('div');
+    secChecklist.className = 'modal-sec-parents-list';
+    secChecklist.id = 'modal-sec-parents';
+
+    const currentSecIds = new Set(node.secondaryParentIds || []);
+
+    allNodes.forEach((n) => {
+      if (n.id === nodeId) return;           // skip self
+      if (descendantIds.has(n.id)) return;   // skip descendants
+      // skip current primary parent (already shown above)
+      if (n.id === currentParentId) return;
+
+      const itemLabel = document.createElement('label');
+      itemLabel.className = 'filter-check-item';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = n.id;
+      cb.checked = currentSecIds.has(n.id);
+
+      const text = document.createElement('span');
+      text.className = 'filter-check-label';
+      text.textContent = n.name;
+
+      itemLabel.appendChild(cb);
+      itemLabel.appendChild(text);
+      secChecklist.appendChild(itemLabel);
+    });
+
+    if (secChecklist.children.length === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'font-size:12px;color:var(--text-muted);padding:6px 0';
+      empty.textContent = 'No other nodes available.';
+      secChecklist.appendChild(empty);
+    }
+
+    secGroup.appendChild(secChecklist);
+    container.appendChild(secGroup);
+
     // Params section
     const paramTitle = document.createElement('h3');
     paramTitle.className = 'modal-subtitle';
@@ -259,7 +310,7 @@ export function openEditModal(nodeId) {
       }
 
       warningMsg.classList.add('hidden');
-      const result = collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, currentParentId);
+      const result = collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, currentParentId, secChecklist);
       closeModal(result);
     });
 
@@ -335,7 +386,7 @@ function createParamRow(key, value, isEditable, isRoot) {
   return tr;
 }
 
-function collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, originalParentId) {
+function collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, originalParentId, secChecklist) {
   const overrides = {};
   const rows = tbody.querySelectorAll('tr');
 
@@ -367,11 +418,20 @@ function collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, or
     });
   }
 
+  // Collect secondary parent IDs
+  const secondaryParentIds = [];
+  if (secChecklist) {
+    secChecklist.querySelectorAll('input[type="checkbox"]:checked').forEach((cb) => {
+      secondaryParentIds.push(cb.value);
+    });
+  }
+
   return {
     name: nameInput.value.trim() || 'Untitled',
     overrides,
     results,
     newParentId: parentSelect.value !== originalParentId ? parentSelect.value : null,
+    secondaryParentIds,
   };
 }
 

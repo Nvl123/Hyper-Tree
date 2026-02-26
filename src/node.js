@@ -1,4 +1,4 @@
-import { getEffectiveParams, getOverriddenKeys, isRootNode, getNodeDepth, updateNode, save } from './store.js';
+import { getEffectiveParams, getOverriddenKeys, isRootNode, getNodeDepth, getNode, updateNode, save } from './store.js';
 
 // Depth color palette — each depth level gets a distinct accent
 const DEPTH_COLORS = [
@@ -64,6 +64,20 @@ export function renderNodeCard(node, onAction) {
   header.appendChild(collapseBtn);
   header.appendChild(nameEl);
   header.appendChild(depthBadge);
+
+  // Secondary parents indicator
+  if (node.secondaryParentIds && node.secondaryParentIds.length > 0) {
+    const secBadge = document.createElement('span');
+    secBadge.className = 'sec-parent-badge';
+    secBadge.title = 'Has secondary parents (parameter union)';
+    const names = node.secondaryParentIds
+      .map(id => { const n = getNode(id); return n ? n.name : '?'; })
+      .join(', ');
+    secBadge.textContent = `🔗 +${node.secondaryParentIds.length}`;
+    secBadge.title = `Secondary: ${names}`;
+    header.appendChild(secBadge);
+  }
+
   card.appendChild(header);
 
   // Params table

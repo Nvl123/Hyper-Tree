@@ -116,9 +116,30 @@ export function duplicateNode(id) {
 export function getEffectiveParams(id) {
   const chain = getAncestorChain(id);
   const merged = {};
+
+  // Primary parent chain — takes precedence
   for (const node of chain) {
     Object.assign(merged, node.overrides);
   }
+
+  // Secondary parents — fill in missing keys (union)
+  const node = getNode(id);
+  if (node && node.secondaryParentIds && node.secondaryParentIds.length > 0) {
+    for (const spId of node.secondaryParentIds) {
+      const spChain = getAncestorChain(spId);
+      const spMerged = {};
+      for (const spNode of spChain) {
+        Object.assign(spMerged, spNode.overrides);
+      }
+      // Only add keys that are not already in merged (union, primary wins)
+      for (const [key, val] of Object.entries(spMerged)) {
+        if (!(key in merged)) {
+          merged[key] = val;
+        }
+      }
+    }
+  }
+
   return merged;
 }
 
