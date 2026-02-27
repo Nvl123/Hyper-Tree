@@ -28,7 +28,8 @@
   --danger: #f56565;
   --danger-hover: #fc8181;
 
-  --toolbar-bg: rgba(15, 17, 23, 0.92);
+  --toolbar-bg: rgba(22, 19, 39, 0.95);    /* Deep indigo tint */
+  --sidebar-bg: rgba(15, 28, 33, 0.98);    /* Deep teal tint */
   --modal-bg: rgba(24, 27, 37, 0.96);
 
   --canvas-glow: rgba(99, 179, 237, 0.03);
@@ -69,7 +70,8 @@
   --danger: #dc2626;
   --danger-hover: #ef4444;
 
-  --toolbar-bg: rgba(255, 255, 255, 0.92);
+  --toolbar-bg: rgba(255, 250, 240, 0.98); /* Warm pearl/amber */
+  --sidebar-bg: rgba(235, 248, 245, 0.98); /* Soft mint/teal */
   --modal-bg: rgba(255, 255, 255, 0.97);
 
   --canvas-glow: rgba(59, 130, 246, 0.03);
@@ -178,6 +180,17 @@ html, body {
   border-color: var(--border-glow);
 }
 
+.toolbar-btn:active {
+  transform: scale(0.92);
+}
+
+.toolbar-btn.active {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
 .toolbar-btn.primary {
   background: rgba(99, 179, 237, 0.12);
   color: var(--accent);
@@ -221,10 +234,32 @@ html, body {
   bottom: 0;
   overflow: hidden;
   cursor: grab;
-  background:
-    radial-gradient(circle at 50% 50%, var(--canvas-glow) 0%, transparent 70%),
-    var(--bg-primary);
-  transition: background 0.3s;
+  /* Base background */
+  background-color: var(--bg-primary);
+  /* Fallback glow when grid is off */
+  background-image: radial-gradient(circle at 50% 50%, var(--canvas-glow) 0%, transparent 70%);
+  transition: background-color 0.3s, background-image 0.3s;
+
+  /* Grid variables defaults */
+  --grid-scale: 1;
+  --grid-pan-x: 0px;
+  --grid-pan-y: 0px;
+  --grid-size: calc(60px * var(--grid-scale));
+}
+
+#canvas-wrapper.show-grid {
+  background-image:
+    linear-gradient(var(--border-card) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-card) 1px, transparent 1px),
+    radial-gradient(circle at 50% 50%, var(--canvas-glow) 0%, transparent 70%);
+  background-size:
+    var(--grid-size) var(--grid-size),
+    var(--grid-size) var(--grid-size),
+    100% 100%;
+  background-position:
+    var(--grid-pan-x) var(--grid-pan-y),
+    var(--grid-pan-x) var(--grid-pan-y),
+    0 0;
 }
 
 #canvas-wrapper:active { cursor: grabbing; }
@@ -812,13 +847,13 @@ html, body {
   right: 0;
   bottom: 0;
   width: 260px;
-  background: var(--toolbar-bg);
+  background: var(--sidebar-bg);
   backdrop-filter: blur(16px);
   border-left: 1px solid var(--border-card);
   z-index: 50;
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s, background 0.3s;
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
 }
 

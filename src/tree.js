@@ -95,11 +95,21 @@ export function initCanvas() {
     if (wrapper) wrapper.style.cursor = '';
   });
 
-  // Zoom
+  // Zoom & Pan via touchpad/wheel
   wrapper.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-    setScale(scale + delta);
+    if (e.ctrlKey) {
+      // Pinch-to-zoom or Ctrl+Wheel
+      // Dynamic step based on deltaY for smoother trackpad feel
+      // A typical mouse wheel gives ~100 deltaY; trackpad gives smaller values
+      const zoomModifier = e.deltaY * -0.01; 
+      setScale(scale + zoomModifier);
+    } else {
+      // Two-finger scroll (pan)
+      panX -= e.deltaX;
+      panY -= e.deltaY;
+      applyTransform();
+    }
   }, { passive: false });
 
   document.getElementById('btn-zoom-in').addEventListener('click', () => setScale(scale + ZOOM_STEP));
@@ -110,6 +120,8 @@ export function initCanvas() {
     panY = 0;
     applyTransform();
   });
+  
+  document.getElementById('btn-recenter').addEventListener('click', recenterView);
 
   applyTransform();
 }
@@ -119,9 +131,63 @@ function setScale(newScale) {
   applyTransform();
 }
 
+export function recenterView() {
+  const container = document.getElementById('tree-container');
+  if (!container || !container.querySelector('.roots-wrapper')) {
+    // Fallback if empty
+    scale = 1; panX = 0; panY = 0;
+    applyTransform();
+    return;
+  }
+
+  const rect = container.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+
+  const wrapperElement = document.getElementById('canvas-wrapper');
+  if (!wrapperElement) return;
+  const viewWidth = wrapperElement.clientWidth;
+  const viewHeight = wrapperElement.clientHeight;
+
+  // Get original (unscaled) dimensions
+  const width = rect.width / scale;
+  const height = rect.height / scale;
+
+  const rectLeftInWrapper = rect.left;
+  const rectTopInWrapper = rect.top - 56; // Subtract toolbar height
+
+  // Get original (unscaled/unpanned) origin
+  const originalX = (rectLeftInWrapper - panX) / scale;
+  const originalY = (rectTopInWrapper - panY) / scale;
+
+  const padding = 80;
+  const scaleX = (viewWidth - padding * 2) / width;
+  const scaleY = (viewHeight - padding * 2) / height;
+
+  // Don't scale up past 100% just to fit small graphs (keeps it looking sane)
+  let newScale = Math.min(scaleX, scaleY, 1);
+  newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+
+  const cx = originalX + width / 2;
+  const cy = originalY + height / 2;
+
+  panX = Math.round((viewWidth / 2) - (cx * newScale));
+  panY = Math.round((viewHeight / 2) - (cy * newScale));
+  scale = Math.round(newScale * 100) / 100;
+
+  applyTransform();
+}
+
 function applyTransform() {
   canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
   if (zoomLabel) zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+
+  // Sync grid background
+  const wrapper = document.getElementById('canvas-wrapper');
+  if (wrapper) {
+    wrapper.style.setProperty('--grid-scale', scale);
+    wrapper.style.setProperty('--grid-pan-x', `${panX}px`);
+    wrapper.style.setProperty('--grid-pan-y', `${panY}px`);
+  }
 }
 
 export function getScale() {

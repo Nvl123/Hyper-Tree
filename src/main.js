@@ -47,10 +47,38 @@ document.getElementById('btn-theme').addEventListener('click', () => {
 });
 
 // Sidebar toggle (from toolbar)
-document.getElementById('btn-show-sidebar').addEventListener('click', () => {
+const sidebarBtn = document.getElementById('btn-show-sidebar');
+if (sidebarBtn) {
   const sidebar = document.getElementById('param-sidebar');
-  sidebar.classList.toggle('collapsed');
-});
+  // Check initial state
+  if (!sidebar.classList.contains('collapsed')) {
+    sidebarBtn.classList.add('active');
+  }
+  
+  sidebarBtn.addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+    sidebarBtn.classList.toggle('active', !sidebar.classList.contains('collapsed'));
+  });
+}
+
+// Grid toggle
+const gridBtn = document.getElementById('btn-toggle-grid');
+if (gridBtn) {
+  const canvasWrapper = document.getElementById('canvas-wrapper');
+  // Load initial grid state
+  const isGridOn = localStorage.getItem('hypertree_grid') === 'true';
+  if (isGridOn) {
+    canvasWrapper.classList.add('show-grid');
+    gridBtn.classList.add('active');
+  }
+
+  gridBtn.addEventListener('click', () => {
+    canvasWrapper.classList.toggle('show-grid');
+    const isActive = canvasWrapper.classList.contains('show-grid');
+    gridBtn.classList.toggle('active', isActive);
+    localStorage.setItem('hypertree_grid', isActive);
+  });
+}
 
 // ─── Smooth Page Transitions ─────────────────────────────
 document.querySelectorAll('a.toolbar-btn').forEach((link) => {
