@@ -25,6 +25,8 @@
 - **Line chart** — Perbandingan metrik antar eksperimen
 - **Radar chart** — Profil eksperimen dalam bentuk spider web
 - **Bar chart** — Ranking per metrik secara visual
+- **Dual-Axis Line Charts** — Analisis korelasi langsung antara Evals vs Akurasi dan Evals vs Loss
+- **Bubble Chart 3D** — Eksplorasi performa eksperimen 3 dimensi (Evals, Accuracy, dan Loss)
 - **Filter sidebar** — Pilih eksperimen & metrik yang ingin dibandingkan
 - **Sort** — Urutkan berdasarkan metrik tertentu (ascending/descending)
 
