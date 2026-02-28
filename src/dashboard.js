@@ -5,6 +5,7 @@ import {
   BarController,
   RadarController,
   ScatterController,
+  BubbleController,
   LineElement,
   BarElement,
   PointElement,
@@ -18,7 +19,7 @@ import {
 } from 'chart.js';
 
 Chart.register(
-  LineController, BarController, RadarController, ScatterController,
+  LineController, BarController, RadarController, ScatterController, BubbleController,
   LineElement, BarElement, PointElement,
   RadialLinearScale, CategoryScale, LinearScale,
   Filler, Legend, Tooltip, Title
@@ -55,7 +56,7 @@ let selectedMetrics = new Set(METRICS);
 let selectedLAMetrics = new Set(LOSS_ACC_METRICS);
 let sortMetric = '';
 let sortDir = 'desc';
-let viewMode = 'eval'; // 'eval' or 'lossacc'
+let viewMode = 'eval'; // 'eval', 'lossacc', or 'correlation'
 
 // ─── Init ────────────────────────────────────────────────
 
@@ -102,9 +103,23 @@ function setupToolbar() {
 
   // Loss & Acc toggle
   const lossAccBtn = document.getElementById('btn-loss-acc');
+  const corrBtn = document.getElementById('btn-correlation');
+
   lossAccBtn.addEventListener('click', () => {
-    viewMode = viewMode === 'eval' ? 'lossacc' : 'eval';
+    viewMode = viewMode === 'lossacc' ? 'eval' : 'lossacc';
     lossAccBtn.classList.toggle('active', viewMode === 'lossacc');
+    corrBtn.classList.toggle('active', false);
+    sortMetric = '';
+    sortDir = 'desc';
+    buildFilters();
+    refreshDashboard();
+  });
+
+  // Correlation toggle
+  corrBtn.addEventListener('click', () => {
+    viewMode = viewMode === 'correlation' ? 'eval' : 'correlation';
+    corrBtn.classList.toggle('active', viewMode === 'correlation');
+    lossAccBtn.classList.toggle('active', false);
     sortMetric = '';
     sortDir = 'desc';
     buildFilters();
@@ -281,7 +296,10 @@ function buildFilters() {
 
   const metTitle = document.createElement('div');
   metTitle.className = 'filter-title';
-  metTitle.textContent = viewMode === 'lossacc' ? '📉 Loss & Acc Metrics' : '📏 Metrics';
+  let titleText = '📏 Metrics';
+  if (viewMode === 'lossacc') titleText = '📉 Loss & Acc Metrics';
+  else if (viewMode === 'correlation') titleText = '🔗 Eval Metrics (Sumbu X)';
+  metTitle.textContent = titleText;
   metSection.appendChild(metTitle);
 
   const metList = document.createElement('div');
@@ -370,17 +388,79 @@ function updateSectionTitles() {
   const t2 = document.getElementById('title-chart-2');
   const t3 = document.getElementById('title-chart-3');
   const tRes = document.getElementById('title-results');
+  
+  const d1 = document.getElementById('desc-chart-1');
+  const d2 = document.getElementById('desc-chart-2');
+  const d3 = document.getElementById('desc-chart-3');
+  
+  const c2 = document.getElementById('radar-chart').parentElement.parentElement;
+  const c3 = document.getElementById('bar-chart').parentElement.parentElement;
 
-  if (viewMode === 'lossacc') {
-    tRes.textContent = '📉 Loss & Accuracy Results';
-    t1.textContent = '📉 Loss Comparison (Lower is Better)';
-    t2.textContent = '🎯 Accuracy Comparison (Higher is Better)';
-    t3.textContent = '🔬 Loss vs Accuracy Trade-off (Scatter)';
+  if (viewMode === 'correlation') {
+    c2.style.display = '';
+    c3.style.display = '';
+    tRes.textContent = '🔗 Correlation Overview';
+    t1.textContent = '📊 Evals vs Acc (Dual-Axis)';
+    t2.textContent = '📉 Evals vs Loss (Dual-Axis)';
+    t3.textContent = '🔮 Evaluation vs Accuracy vs Loss (Bubble Chart)';
+    
+    // Show reading guides
+    d1.querySelector('.desc-content').innerHTML = `
+      <p><strong>Grafik apa ini?</strong><br>
+      Grafik ini menyandingkan skor gabungan dari Metrik Teks (BLEU, CIDEr, dll) yang Anda pilih sebagai garis area biru berurutan dari kiri ke kanan (Sumbu Y kiri), dengan skor Accuracy sebagai garis merah (Sumbu Y kanan).</p>
+      
+      <p style="margin-top: 8px;"><strong>Cara Menganalisis Korelasi:</strong><br>
+      Tujuan grafik ini adalah melihat apakah model yang pintar menebak teks terjemahan/diksi juga pintar menebak klasifikasinya.<br>
+      • <span style="color: #4CAF50; font-weight: bold;">Korelasi Baik:</span> Garis merah Akurasi ikut <strong>merambat naik dan menanjak sejajar</strong> secara konstan seiring berjalannya garis biru Evaluasi Teks ke arah kanan.<br>
+      • <span style="color: #F44336; font-weight: bold;">Korelasi Buruk:</span> Garis merah tetap datar di bawah, atau bergerak zig-zag tidak menentu ke bawah bertentangan dengan garis biru.</p>
+    `;
+
+    d2.querySelector('.desc-content').innerHTML = `
+      <p><strong>Grafik apa ini?</strong><br>
+      Grafik ini menyandingkan skor gabungan dari Metrik Teks (BLEU, CIDEr, dll) sebagai garis area biru yang merambat naik (Sumbu Y kiri), dilawankan dengan metrik hambatan/kesalahan alias Loss sebagai garis merah (Sumbu Y kanan).</p>
+      
+      <p style="margin-top: 8px;"><strong>Cara Menganalisis Korelasi:</strong><br>
+      Tujuan grafik ini adalah mengonfirmasi bahwa naiknya kualitas teks benar-benar disebabkan oleh penurunan hambatan berlatih (Loss).<br>
+      • <span style="color: #4CAF50; font-weight: bold;">Korelasi Baik:</span> Garis merah Loss <strong>berlawanan arah secara sempurna</strong> dengan garis biru Evaluasi. Anda akan melihat garis merah <strong>menukik curam turun</strong> dari ujung kiri atas ke ujung kanan bawah (membentuk silangan huruf "X").<br>
+      • <span style="color: #F44336; font-weight: bold;">Korelasi Buruk:</span> Loss tetap tinggi (di atas) padahal skor evaluasi membaik, menandakan model mungkin hanya menghafal/overfitting tanpa memperbaiki esensi dasarnya.</p>
+    `;
+
+    d3.querySelector('.desc-content').innerHTML = `
+      <p><strong>Grafik apa ini?</strong><br>
+      Ini adalah arena final penentuan Hyperparameter terbaik yang mencakup 3 dimensi performa sekaligus dalam satu kanvas kompetisi.</p>
+      
+      <p style="margin-top: 8px;"><strong>Cara Membaca 4 Elemen Gelembung:</strong><br>
+      <strong>1. Sumbu X (Kiri-Kanan):</strong> Kualitas Metrik Teks (BLEU, ROUGE, dll). Semakin ke <strong>kanan</strong> artinya semakin cerdas menjalin kalimat.<br>
+      <strong>2. Sumbu Y (Bawah-Atas):</strong> Kualitas Akurasi. Semakin ke <strong>atas</strong> artinya semakin akurat menebak/mengklasifikasi.<br>
+      <strong>3. Ukuran Gelembung:</strong> Besaran Loss. Berbanding terbalik: <strong>Semakin besar gelembungnya</strong>, justru Loss-nya semakin kecil dan mulus.<br>
+      <strong>4. Warna Gelembung:</strong> Status Loss. Hijau cerah = Loss kecil optimal. Merah/Gelap = Loss buruk.</p>
+
+      <p style="margin-top: 8px;"><span style="color: #4CAF50; font-weight: bold;">Mencari Pemenang (Juara Ideal):</span><br>
+      Abaikan gelembung yang berwarna kemerahan atau kecil-kecil yang berada di pojok kiri bawah. 
+      Carilah gelembung <strong>berwarna Hijau Terang berukuran Besar</strong>, yang posisinya paling merangsek maju ke arah <strong>Pojok Kanan Atas (↘️)</strong>. Itu dipastikan adalah tabel settingan parameter model terbaik milik Anda.</p>
+    `;
+    
+    d1.classList.remove('hidden');
+    d2.classList.remove('hidden');
+    d3.classList.remove('hidden');
   } else {
-    tRes.textContent = '🏆 Experiment Results';
-    t1.textContent = '📈 Metrics Comparison (Line Chart)';
-    t2.textContent = '🕸️ Experiment Profiles (Radar Chart)';
-    t3.textContent = '📊 Per-Metric Ranking (Grouped Bar Chart)';
+    c2.style.display = '';
+    c3.style.display = '';
+    d1.classList.add('hidden');
+    d2.classList.add('hidden');
+    d3.classList.add('hidden');
+    
+    if (viewMode === 'lossacc') {
+      tRes.textContent = '📉 Loss & Accuracy Results';
+      t1.textContent = '📉 Loss Comparison (Lower is Better)';
+      t2.textContent = '🎯 Accuracy Comparison (Higher is Better)';
+      t3.textContent = '🔬 Loss vs Accuracy Trade-off (Scatter)';
+    } else {
+      tRes.textContent = '🏆 Experiment Results';
+      t1.textContent = '📈 Metrics Comparison (Line Chart)';
+      t2.textContent = '🕸️ Experiment Profiles (Radar Chart)';
+      t3.textContent = '📊 Per-Metric Ranking (Grouped Bar Chart)';
+    }
   }
 }
 
@@ -406,6 +486,10 @@ function refreshDashboard() {
     renderLossBarChart(filtered);
     renderAccuracyBarChart(filtered);
     renderLossAccScatter(filtered);
+  } else if (viewMode === 'correlation') {
+    renderCorrelationDualAxis(filtered, activeMetrics, labels);
+    renderCorrelationDualAxisLoss(filtered, activeMetrics, labels);
+    renderCorrelationBubble(filtered, activeMetrics, labels);
   } else {
     renderLineChart(filtered, activeMetrics, labels);
     renderRadarChart(filtered, activeMetrics, labels);
@@ -994,5 +1078,317 @@ function renderLossAccScatter(experiments) {
         },
       },
     },
+  });
+}
+
+// ─── Correlation Bubble Chart ──────────────────────────────
+
+function renderCorrelationBubble(experiments, activeMetrics, labels) {
+  const ctx = document.getElementById('bar-chart');
+  if (barChart) barChart.destroy();
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const c = getLAChartColors(isDark);
+
+  // Fallback map if the user unchecked all metrics (will not happen due to empty state handling, but safe)
+  if (activeMetrics.length === 0) activeMetrics = ['bleu_1'];
+
+  const getMetricMax = (metric) => {
+    if (metric === 'cider') return 10.0; // typical CIDEr max roughly 10
+    if (metric === 'spice') return 1.0; 
+    return 1.0; // BLEU, ROUGE, METEOR are 0-1
+  };
+
+  const calculateEvalScore = (exp) => {
+    let sum = 0;
+    let count = 0;
+    activeMetrics.forEach(m => {
+      const val = parseFloat(exp.results[m]);
+      if (!isNaN(val)) {
+        // Normalize val to 0-1 approx.
+        const max = getMetricMax(m);
+        sum += (val / max);
+        count++;
+      }
+    });
+    return count > 0 ? sum / count : 0;
+  };
+
+  const datasets = experiments.map(exp => {
+    const origIdx = allExperiments.findIndex(e => e.id === exp.id);
+    
+    const loss = parseFloat(exp.results.loss) || 0;
+    const acc = parseFloat(exp.results.accuracy) || 0;
+    const evalScore = calculateEvalScore(exp);
+
+    // Bubble radius inversely proportional to loss (smaller loss = bigger bubble, bounded 5..30)
+    // Example: If loss varies 0.0 .. 2.0
+    const maxExpectedLoss = 2.0;
+    let radius = 25 - (loss / maxExpectedLoss * 20);
+    radius = Math.max(5, Math.min(30, radius));
+
+    // Color gradient based on loss (Low loss = Green, High loss = Red)
+    // Using HSL: Hue 120 (Green) to Hue 0 (Red)
+    const lossRatio = Math.min(1, Math.max(0, loss / 2.0)); 
+    const hue = (1 - lossRatio) * 120; // 120=Green, 0=Red
+    const bgCol = `hsla(${hue}, 70%, 50%, 0.6)`;
+    const borderCol = `hsl(${hue}, 80%, 45%)`;
+
+    return {
+      label: exp.name,
+      data: [{
+        x: evalScore,
+        y: acc,
+        r: radius,
+        _loss: loss // store for tooltip
+      }],
+      backgroundColor: bgCol,
+      borderColor: borderCol,
+      borderWidth: 2,
+      hoverBackgroundColor: `hsla(${hue}, 80%, 60%, 0.8)`,
+      hoverBorderWidth: 3,
+    };
+  });
+
+  barChart = new Chart(ctx, {
+    type: 'bubble',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            color: c.textColor,
+            font: { family: 'Inter', size: 11 },
+            usePointStyle: true,
+            boxWidth: 10,
+          }
+        },
+        tooltip: {
+          backgroundColor: c.tooltipBg,
+          titleColor: c.tooltipTitle,
+          bodyColor: c.tooltipBody,
+          borderColor: c.tooltipBorder,
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 8,
+          titleFont: { family: 'Inter', weight: '600' },
+          bodyFont: { family: 'Inter' },
+          callbacks: {
+            label: (ctx) => {
+              const pt = ctx.raw;
+              return [
+                ctx.dataset.label,
+                `Evals (X): ${pt.x.toFixed(4)}`,
+                `Accuracy (Y): ${pt.y.toFixed(4)}`,
+                `Loss (Size/Color): ${pt._loss.toFixed(4)}`
+              ];
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: c.gridColor },
+          ticks: { color: c.textColor, font: { family: 'Inter', size: 11 } },
+          title: {
+            display: true,
+            text: 'Normalized Evals Score (higher is better →)',
+            color: c.textColor,
+            font: { family: 'Inter', size: 12, weight: '600' },
+          },
+          beginAtZero: true,
+        },
+        y: {
+          grid: { color: c.gridColor },
+          ticks: { color: c.textColor, font: { family: 'Inter', size: 11 } },
+          title: {
+            display: true,
+            text: 'Accuracy (higher is better ↑)',
+            color: c.textColor,
+            font: { family: 'Inter', size: 12, weight: '600' },
+          },
+          beginAtZero: true,
+        },
+      },
+    },
+  });
+}
+
+// ─── Dual-Axis Line (Evals vs Acc) ───────────────────────
+
+function renderCorrelationDualAxis(experiments, activeMetrics, labels) {
+  const ctx = document.getElementById('line-chart');
+  if (lineChart) lineChart.destroy();
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const c = getLAChartColors(isDark);
+  
+  if (activeMetrics.length === 0) activeMetrics = ['bleu_1'];
+
+  const getMetricMax = (metric) => {
+    if (metric === 'cider') return 10.0;
+    if (metric === 'spice') return 1.0; 
+    return 1.0;
+  };
+  
+  const sorted = [...experiments].map(exp => {
+    let sum = 0, count = 0;
+    activeMetrics.forEach(m => {
+      const val = parseFloat(exp.results[m]);
+      if (!isNaN(val)) {
+        sum += (val / getMetricMax(m));
+        count++;
+      }
+    });
+    return {
+      name: exp.name,
+      evalScore: count > 0 ? sum / count : 0,
+      acc: parseFloat(exp.results.accuracy) || 0
+    };
+  }).sort((a, b) => a.evalScore - b.evalScore);
+
+  lineChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: sorted.map(s => s.name),
+      datasets: [
+        {
+          label: 'Evals (avg/normalized)',
+          data: sorted.map(s => s.evalScore),
+          borderColor: CHART_COLORS[0],
+          backgroundColor: CHART_COLORS[0] + '33',
+          borderWidth: 2,
+          yAxisID: 'y',
+          tension: 0.3,
+          fill: true
+        },
+        {
+          label: 'Accuracy',
+          data: sorted.map(s => s.acc),
+          borderColor: CHART_COLORS[1],
+          backgroundColor: CHART_COLORS[1] + '33',
+          borderWidth: 2,
+          yAxisID: 'y1',
+          tension: 0.3,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: c.textColor, font: { family: 'Inter', size: 11 } } },
+        tooltip: {
+           backgroundColor: c.tooltipBg, titleColor: c.tooltipTitle, bodyColor: c.tooltipBody,
+           titleFont: { family: 'Inter', weight: '600' }, bodyFont: { family: 'Inter' },
+        }
+      },
+      scales: {
+        x: { ticks: { color: c.textColor, font: { family: 'Inter', size: 10 } } },
+        y: {
+          type: 'linear', display: true, position: 'left',
+          grid: { color: c.gridColor },
+          ticks: { color: c.textColor, font: { family: 'Inter', size: 11 } },
+          title: { display: true, text: 'Evals', color: c.textColor, font: { family: 'Inter', weight: '600' } }
+        },
+        y1: {
+          type: 'linear', display: true, position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: { color: c.textColor, font: { family: 'Inter', size: 11 } },
+          title: { display: true, text: 'Accuracy', color: c.textColor, font: { family: 'Inter', weight: '600' } }
+        }
+      }
+    }
+  });
+}
+
+// ─── Dual-Axis Line (Evals vs Loss) ───────────────────────
+
+function renderCorrelationDualAxisLoss(experiments, activeMetrics, labels) {
+  const ctx = document.getElementById('radar-chart');
+  if (radarChart) radarChart.destroy();
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const c = getLAChartColors(isDark);
+  
+  if (activeMetrics.length === 0) activeMetrics = ['bleu_1'];
+
+  const getMetricMax = (metric) => {
+    if (metric === 'cider') return 10.0;
+    if (metric === 'spice') return 1.0; 
+    return 1.0;
+  };
+  
+  const sorted = [...experiments].map(exp => {
+    let sum = 0, count = 0;
+    activeMetrics.forEach(m => {
+      const val = parseFloat(exp.results[m]);
+      if (!isNaN(val)) {
+        sum += (val / getMetricMax(m));
+        count++;
+      }
+    });
+    return {
+      name: exp.name,
+      evalScore: count > 0 ? sum / count : 0,
+      loss: parseFloat(exp.results.loss) || 0
+    };
+  }).sort((a, b) => a.evalScore - b.evalScore);
+
+  radarChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: sorted.map(s => s.name),
+      datasets: [
+        {
+          label: 'Evals (avg/normalized)',
+          data: sorted.map(s => s.evalScore),
+          borderColor: CHART_COLORS[0],
+          backgroundColor: CHART_COLORS[0] + '33',
+          borderWidth: 2,
+          yAxisID: 'y',
+          tension: 0.3,
+          fill: true
+        },
+        {
+          label: 'Loss',
+          data: sorted.map(s => s.loss),
+          borderColor: '#f56565', // Red strictly for Loss to distinguish
+          backgroundColor: '#f5656533',
+          borderWidth: 2,
+          yAxisID: 'y1',
+          tension: 0.3,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: c.textColor, font: { family: 'Inter', size: 11 } } },
+        tooltip: {
+           backgroundColor: c.tooltipBg, titleColor: c.tooltipTitle, bodyColor: c.tooltipBody,
+           titleFont: { family: 'Inter', weight: '600' }, bodyFont: { family: 'Inter' },
+        }
+      },
+      scales: {
+        x: { ticks: { color: c.textColor, font: { family: 'Inter', size: 10 } } },
+        y: {
+          type: 'linear', display: true, position: 'left',
+          grid: { color: c.gridColor },
+          ticks: { color: c.textColor, font: { family: 'Inter', size: 11 } },
+          title: { display: true, text: 'Evals (Higher is Better)', color: c.textColor, font: { family: 'Inter', weight: '600' } }
+        },
+        y1: {
+          type: 'linear', display: true, position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: { color: c.textColor, font: { family: 'Inter', size: 11 } },
+          title: { display: true, text: 'Loss', color: c.textColor, font: { family: 'Inter', weight: '600' } }
+        }
+      }
+    }
   });
 }

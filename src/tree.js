@@ -31,6 +31,13 @@ let canvas, svg, treeContainer, zoomLabel;
 // Drag state for node dragging
 let dragState = null;
 
+const nodeResizeObserver = new window.ResizeObserver(() => {
+  const roots = getRoots();
+  if (roots && roots.length > 0 && !dragState) {
+    requestAnimationFrame(() => drawAllConnections(roots));
+  }
+});
+
 export function initCanvas() {
   canvas = document.getElementById('canvas');
   svg = document.getElementById('connections');
@@ -103,7 +110,7 @@ export function initCanvas() {
       // Dynamic step based on deltaY for smoother trackpad feel
       // A typical mouse wheel gives ~100 deltaY; trackpad gives smaller values
       const zoomModifier = e.deltaY * -0.01; 
-      setScale(scale + zoomModifier);
+      zoomAt(e.clientX, e.clientY, scale + zoomModifier);
     } else {
       // Two-finger scroll (pan)
       panX -= e.deltaX;
@@ -112,8 +119,8 @@ export function initCanvas() {
     }
   }, { passive: false });
 
-  document.getElementById('btn-zoom-in').addEventListener('click', () => setScale(scale + ZOOM_STEP));
-  document.getElementById('btn-zoom-out').addEventListener('click', () => setScale(scale - ZOOM_STEP));
+  document.getElementById('btn-zoom-in').addEventListener('click', () => zoomCenter(ZOOM_STEP));
+  document.getElementById('btn-zoom-out').addEventListener('click', () => zoomCenter(-ZOOM_STEP));
   document.getElementById('btn-zoom-reset').addEventListener('click', () => {
     scale = 1;
     panX = 0;
@@ -124,6 +131,33 @@ export function initCanvas() {
   document.getElementById('btn-recenter').addEventListener('click', recenterView);
 
   applyTransform();
+}
+
+function zoomAt(clientX, clientY, newScale) {
+  const wrapper = document.getElementById('canvas-wrapper');
+  if (!wrapper) return;
+  const rect = wrapper.getBoundingClientRect();
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+
+  newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+  if (scale === newScale) return;
+
+  // Compute new panX and panY to keep the point (x, y) at the same position in viewport
+  panX = x - (x - panX) * (newScale / scale);
+  panY = y - (y - panY) * (newScale / scale);
+  scale = newScale;
+
+  applyTransform();
+}
+
+function zoomCenter(zoomModifier) {
+  const wrapper = document.getElementById('canvas-wrapper');
+  if (!wrapper) return;
+  const rect = wrapper.getBoundingClientRect();
+  const x = rect.width / 2;
+  const y = rect.height / 2;
+  zoomAt(rect.left + x, rect.top + y, scale + zoomModifier);
 }
 
 function setScale(newScale) {
@@ -200,6 +234,12 @@ let currentOnAction = null;
 
 export function renderTree(roots, onAction) {
   currentOnAction = onAction;
+  
+  // Clear previous observers to prevent memory leaks and redundant calls
+  if (nodeResizeObserver) {
+    nodeResizeObserver.disconnect();
+  }
+
   treeContainer.innerHTML = '';
   svg.innerHTML = '';
 
@@ -291,6 +331,7 @@ function buildSubtree(node, onAction) {
   wrapper.dataset.nodeId = node.id;
 
   const card = renderNodeCard(node, onAction);
+  nodeResizeObserver.observe(card);
 
   // Make card draggable
   card.setAttribute('draggable', 'false'); // we use pointer events instead
@@ -310,7 +351,12 @@ function buildSubtree(node, onAction) {
     wrapper.appendChild(childrenContainer);
   }
   // Apply saved position offset
-  if (node.position) {
+  if (node.isAbsolute) {
+    wrapper.style.position = 'absolute';
+    wrapper.style.left = (node.position?.x || 0) + 'px';
+    wrapper.style.top = (node.position?.y || 0) + 'px';
+    wrapper.style.zIndex = '10'; // ensure it renders above flex standard items
+  } else if (node.position) {
     wrapper.style.position = 'relative';
     wrapper.style.left = node.position.x + 'px';
     wrapper.style.top = node.position.y + 'px';
@@ -359,6 +405,7 @@ function handleDragMove(e) {
     if (original) {
       original.classList.add('drag-source');
       dragState.subtree = original.closest('.subtree');
+      dragState.isAbsolute = dragState.subtree?.style.position === 'absolute';
       dragState.origLeft = parseFloat(dragState.subtree?.style.left) || 0;
       dragState.origTop = parseFloat(dragState.subtree?.style.top) || 0;
     }
@@ -370,7 +417,9 @@ function handleDragMove(e) {
   if (dragState.subtree) {
     const moveX = dx / scale;
     const moveY = dy / scale;
-    dragState.subtree.style.position = 'relative';
+    if (!dragState.isAbsolute) {
+       dragState.subtree.style.position = 'relative';
+    }
     dragState.subtree.style.left = (dragState.origLeft + moveX) + 'px';
     dragState.subtree.style.top = (dragState.origTop + moveY) + 'px';
   }

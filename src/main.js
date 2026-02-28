@@ -157,10 +157,27 @@ async function handleAction(action, nodeId, extra) {
       }
       break;
 
-    case 'duplicate':
-      duplicateNode(nodeId);
+    case 'duplicate': {
+      const originalSubtree = document.querySelector(`.subtree[data-node-id="${nodeId}"]`);
+      let absoluteOpts = null;
+      if (originalSubtree) {
+        const isAbs = originalSubtree.style.position === 'absolute';
+        const leftOffset = parseFloat(originalSubtree.style.left) || 0;
+        const topOffset = parseFloat(originalSubtree.style.top) || 0;
+        
+        if (isAbs) {
+          absoluteOpts = { x: leftOffset + 40, y: topOffset + 40 };
+        } else {
+          absoluteOpts = {
+            x: originalSubtree.offsetLeft + leftOffset + 40,
+            y: originalSubtree.offsetTop + topOffset + 40
+          };
+        }
+      }
+      duplicateNode(nodeId, absoluteOpts);
       render();
       break;
+    }
 
     case 'toggle': {
       const node = getNode(nodeId);

@@ -40,14 +40,22 @@ function getAncestorChain(id) {
   return chain;
 }
 
-function deepCloneNode(node) {
+function deepCloneNode(node, isRootClone = true, absoluteOpts = null) {
+  const isAbs = isRootClone && absoluteOpts ? true : node.isAbsolute;
+  const clonePos = isRootClone && absoluteOpts 
+                     ? { x: absoluteOpts.x, y: absoluteOpts.y } 
+                     : (node.position ? { x: node.position.x + (isRootClone ? 40 : 0), y: node.position.y + (isRootClone ? 40 : 0) } : undefined);
+
   return {
     id: uuidv4(),
-    name: node.name + ' (copy)',
+    name: isRootClone ? node.name + ' (copy)' : node.name,
     overrides: { ...node.overrides },
     results: { ...(node.results || {}) },
-    children: [],
-    collapsed: false,
+    secondaryParentIds: node.secondaryParentIds ? [...node.secondaryParentIds] : [],
+    position: clonePos,
+    isAbsolute: isAbs,
+    collapsed: node.collapsed,
+    children: (node.children || []).map(child => deepCloneNode(child, false))
   };
 }
 
@@ -103,10 +111,10 @@ export function deleteNode(id) {
   save();
 }
 
-export function duplicateNode(id) {
+export function duplicateNode(id, absoluteOpts = null) {
   const result = findNodeAndParent(id);
   if (!result) return null;
-  const clone = deepCloneNode(result.node);
+  const clone = deepCloneNode(result.node, true, absoluteOpts);
   const idx = result.siblings.indexOf(result.node);
   result.siblings.splice(idx + 1, 0, clone);
   save();
@@ -150,6 +158,19 @@ export function getEffectiveParams(id) {
   }
 
   return finalMerged;
+}
+
+export function getInheritedParams(id) {
+  const result = findNodeAndParent(id);
+  // Root nodes have no parents thus no inherited params
+  if (!result || !result.parent) return {};
+
+  const node = result.node;
+  const backup = node.overrides;
+  node.overrides = {};
+  const inherited = getEffectiveParams(id);
+  node.overrides = backup;
+  return inherited;
 }
 
 export function getOverriddenKeys(id) {

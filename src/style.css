@@ -288,14 +288,14 @@ html, body {
 .connection-line {
   fill: none;
   stroke: var(--connection-stroke);
-  stroke-width: 2;
+  stroke-width: 3.5;
   stroke-linecap: round;
 }
 
 .connection-line-secondary {
   fill: none;
   stroke: var(--secondary-stroke);
-  stroke-width: 2;
+  stroke-width: 3;
   stroke-linecap: round;
   stroke-dasharray: 8 4;
 }
@@ -1146,6 +1146,45 @@ html, body {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin-top: 8px;
+}
+
+details.chart-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 4px 0 16px 0;
+  line-height: 1.5;
+  background: var(--card-bg);
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+details.chart-desc summary {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-primary);
+  user-select: none;
+  background: var(--header-bg);
+  outline: none;
+}
+
+details.chart-desc summary:hover {
+  background: var(--hover-bg);
+}
+
+details.chart-desc .desc-content {
+  padding: 12px;
+  border-top: 1px solid var(--border-card);
+}
+
+details.chart-desc strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+details.chart-desc.hidden {
+  display: none;
 }
 
 .modal-result-field {

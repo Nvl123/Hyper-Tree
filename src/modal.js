@@ -1,4 +1,4 @@
-import { getEffectiveParams, getOverriddenKeys, getNode, isRootNode, getAllNodes, getParentNode } from './store.js';
+import { getEffectiveParams, getOverriddenKeys, getNode, isRootNode, getAllNodes, getParentNode, getInheritedParams } from './store.js';
 
 let modalEl, backdropEl;
 let currentResolve = null;
@@ -22,6 +22,7 @@ export function openEditModal(nodeId) {
     if (!node) { resolve(null); return; }
 
     const effectiveParams = getEffectiveParams(nodeId);
+    const inheritedParams = getInheritedParams(nodeId);
     const overriddenKeys = getOverriddenKeys(nodeId);
     const isRoot = isRootNode(nodeId);
 
@@ -312,7 +313,7 @@ export function openEditModal(nodeId) {
       }
 
       warningMsg.classList.add('hidden');
-      const result = collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, currentParentId, secChecklist, initialKeys);
+      const result = collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, currentParentId, secChecklist, initialKeys, inheritedParams);
       closeModal(result);
     });
 
@@ -389,7 +390,7 @@ function createParamRow(key, value, isEditable, isRoot) {
   return tr;
 }
 
-function collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, originalParentId, secChecklist, initialKeys = new Set()) {
+function collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, originalParentId, secChecklist, initialKeys = new Set(), inheritedParams = {}) {
   const overrides = {};
   const rows = tbody.querySelectorAll('tr');
   const presentKeys = new Set();
@@ -407,8 +408,12 @@ function collectFormData(nameInput, tbody, isRoot, resultsGrid, parentSelect, or
 
     // If row is overridden (editable) or is root, include it
     const isOverridden = row.classList.contains('modal-row-overridden') || !valEl.readOnly;
-    if (isOverridden || isRoot) {
+    if (isRoot) {
       overrides[key] = val;
+    } else if (isOverridden) {
+      if (inheritedParams[key] !== val) {
+        overrides[key] = val;
+      }
     }
   });
 

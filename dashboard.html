@@ -29,6 +29,10 @@
       <button id="btn-loss-acc" class="toolbar-btn" title="Toggle Loss & Accuracy view">
         <span class="btn-icon">📉</span> Loss & Acc
       </button>
+      <div class="toolbar-divider"></div>
+      <button id="btn-correlation" class="toolbar-btn" title="Toggle Correlation view">
+        <span class="btn-icon">🔗</span> Correlation
+      </button>
     </div>
     <div class="toolbar-right">
       <button id="btn-theme" class="toolbar-btn small" title="Toggle theme">
@@ -72,6 +76,7 @@
           <!-- Line Chart -->
           <section class="dashboard-section chart-section">
             <h2 class="section-title" id="title-chart-1">📈 Metrics Comparison (Line Chart)</h2>
+            <details class="chart-desc hidden" id="desc-chart-1"><summary>Cara Baca</summary><div class="desc-content"></div></details>
             <div class="chart-container">
               <canvas id="line-chart"></canvas>
             </div>
@@ -80,6 +85,7 @@
           <!-- Radar Chart -->
           <section class="dashboard-section chart-section">
             <h2 class="section-title" id="title-chart-2">🕸️ Experiment Profiles (Radar Chart)</h2>
+            <details class="chart-desc hidden" id="desc-chart-2"><summary>Cara Baca</summary><div class="desc-content"></div></details>
             <div class="chart-container">
               <canvas id="radar-chart"></canvas>
             </div>
@@ -90,6 +96,7 @@
         <div class="charts-row">
           <section class="dashboard-section chart-section">
             <h2 class="section-title" id="title-chart-3">📊 Per-Metric Ranking (Grouped Bar Chart)</h2>
+            <details class="chart-desc hidden" id="desc-chart-3"><summary>Cara Baca</summary><div class="desc-content"></div></details>
             <div class="chart-container chart-container-wide">
               <canvas id="bar-chart"></canvas>
             </div>
