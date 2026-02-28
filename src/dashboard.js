@@ -56,13 +56,95 @@ let selectedMetrics = new Set(METRICS);
 let selectedLAMetrics = new Set(LOSS_ACC_METRICS);
 let sortMetric = '';
 let sortDir = 'desc';
-let viewMode = 'eval'; // 'eval', 'lossacc', or 'correlation'
+let viewMode = 'eval'; // 'eval', 'lossacc', 'correlation', or 'similarity'
+let activePage = 'explore'; // 'explore', 'baseline', or 'significance'
 
 // ─── Init ────────────────────────────────────────────────
 
 initTheme();
+setupSidebar();
 setupToolbar();
 loadFromLocalStorage();
+
+// ─── Sidebar Navigation ──────────────────────────────────
+
+function setupSidebar() {
+  const toggleBtn = document.getElementById('btn-toggle-sidebar');
+  const sidebar = document.getElementById('app-sidebar');
+  const btnExplore = document.getElementById('nav-explore');
+  const btnBaseline = document.getElementById('nav-baseline');
+  const btnSignificance = document.getElementById('nav-significance');
+  const mainContent = document.getElementById('dashboard-main');
+  const emptyContent = document.getElementById('dashboard-empty');
+  const baselineContent = document.getElementById('baseline-main');
+  const significanceContent = document.getElementById('significance-main');
+  const toolbarCenter = document.querySelector('.toolbar-center');
+
+  // Toggle Sidebar
+  toggleBtn.addEventListener('click', () => {
+    if (window.innerWidth <= 768) {
+      sidebar.classList.toggle('mobile-open');
+    } else {
+      sidebar.classList.toggle('collapsed');
+    }
+  });
+
+  // Navigation Logic
+  const switchPage = (page) => {
+    activePage = page;
+    
+    // Update active states
+    // Update active states
+    btnExplore.classList.toggle('active', page === 'explore');
+    btnBaseline.classList.toggle('active', page === 'baseline');
+    btnSignificance.classList.toggle('active', page === 'significance');
+
+    if (page === 'explore') {
+      baselineContent.classList.add('hidden');
+      significanceContent.classList.add('hidden');
+      toolbarCenter.classList.remove('hidden'); // Show standard filters
+      if (allExperiments.length === 0) {
+        emptyContent.classList.remove('hidden');
+        mainContent.classList.add('hidden');
+      } else {
+        emptyContent.classList.add('hidden');
+        mainContent.classList.remove('hidden');
+        refreshDashboard();
+      }
+    } else if (page === 'baseline') {
+      mainContent.classList.add('hidden');
+      emptyContent.classList.add('hidden');
+      significanceContent.classList.add('hidden');
+      toolbarCenter.classList.add('hidden'); // Hide correlation/loss filters
+      if (allExperiments.length > 0) {
+        baselineContent.classList.remove('hidden');
+        renderBaselineComparison(allExperiments);
+      } else {
+        baselineContent.classList.add('hidden');
+        emptyContent.classList.remove('hidden');
+      }
+    } else if (page === 'significance') {
+      mainContent.classList.add('hidden');
+      emptyContent.classList.add('hidden');
+      baselineContent.classList.add('hidden');
+      toolbarCenter.classList.add('hidden');
+      if (allExperiments.length > 0) {
+        significanceContent.classList.remove('hidden');
+        renderSignificanceView(allExperiments);
+      } else {
+        significanceContent.classList.add('hidden');
+        emptyContent.classList.remove('hidden');
+      }
+    }
+    
+    // Close sidebar on mobile after click
+    if (window.innerWidth <= 768) sidebar.classList.remove('mobile-open');
+  };
+
+  btnExplore.addEventListener('click', () => switchPage('explore'));
+  btnBaseline.addEventListener('click', () => switchPage('baseline'));
+  btnSignificance.addEventListener('click', () => switchPage('significance'));
+}
 
 // ─── Theme ───────────────────────────────────────────────
 
@@ -104,11 +186,13 @@ function setupToolbar() {
   // Loss & Acc toggle
   const lossAccBtn = document.getElementById('btn-loss-acc');
   const corrBtn = document.getElementById('btn-correlation');
+  const simBtn = document.getElementById('btn-similarity');
 
   lossAccBtn.addEventListener('click', () => {
     viewMode = viewMode === 'lossacc' ? 'eval' : 'lossacc';
     lossAccBtn.classList.toggle('active', viewMode === 'lossacc');
     corrBtn.classList.toggle('active', false);
+    simBtn.classList.toggle('active', false);
     sortMetric = '';
     sortDir = 'desc';
     buildFilters();
@@ -120,6 +204,18 @@ function setupToolbar() {
     viewMode = viewMode === 'correlation' ? 'eval' : 'correlation';
     corrBtn.classList.toggle('active', viewMode === 'correlation');
     lossAccBtn.classList.toggle('active', false);
+    simBtn.classList.toggle('active', false);
+    sortMetric = '';
+    sortDir = 'desc';
+    refreshDashboard();
+  });
+
+  // Similarity toggle
+  simBtn.addEventListener('click', () => {
+    viewMode = viewMode === 'similarity' ? 'eval' : 'similarity';
+    simBtn.classList.toggle('active', viewMode === 'similarity');
+    lossAccBtn.classList.toggle('active', false);
+    corrBtn.classList.toggle('active', false);
     sortMetric = '';
     sortDir = 'desc';
     buildFilters();
@@ -143,7 +239,13 @@ function loadFromLocalStorage() {
   const data = getTreeDataFromStorage();
   if (data && data.roots && data.roots.length > 0) {
     initExperiments(data);
-    refreshDashboard();
+    if (activePage === 'explore') {
+      refreshDashboard();
+    } else if (activePage === 'baseline') {
+      renderBaselineComparison(allExperiments);
+    } else if (activePage === 'significance') {
+      renderSignificanceView(allExperiments);
+    }
   }
 }
 
@@ -396,7 +498,36 @@ function updateSectionTitles() {
   const c2 = document.getElementById('radar-chart').parentElement.parentElement;
   const c3 = document.getElementById('bar-chart').parentElement.parentElement;
 
-  if (viewMode === 'correlation') {
+  if (viewMode === 'similarity') {
+    c2.style.display = '';
+    c3.style.display = 'none'; // Only 2 charts for similarity, hide the bottom one
+    tRes.textContent = '👯 Similarity Overview';
+    t1.textContent = '🕸️ Experiment Profiles (Radar Chart)';
+    t2.textContent = '🧮 Experiment Similarity Heatmap';
+    
+    // Show reading guides
+    d1.querySelector('.desc-content').innerHTML = `
+      <p><strong>Grafik apa ini?</strong><br>
+      Grafik ini menumpuk seluruh profil eksperimen di atas satu sama lain.</p>
+      
+      <p style="margin-top: 8px;"><strong>Cara Membaca Jaring:</strong><br>
+      Jika bentuk poligon/luas jaring dua eksperimen nyaris sama secara visual, itu artinya performa mereka sangat identik sebelum Anda melihat angka matriks.</p>
+    `;
+
+    d2.querySelector('.desc-content').innerHTML = `
+      <p><strong>Grafik apa ini?</strong><br>
+      Grafik kotak-kotak (Heatmap) ini membandingkan kedudukan matematis antara Eksperimen A di sisi vertikal melawan Eksperimen B di sisi horizontal.</p>
+      
+      <p style="margin-top: 8px;"><strong>Cara Menganalisis Similarity:</strong><br>
+      Sistem mengubah kombinasi <em>seluruh</em> metrik evaluasi eksperimen menjadi vektor. Kemudian jarak keunikannya dihubungkan menggunakan <em>Cosine Similarity</em>.<br>
+      • <span style="color: #4CAF50; font-weight: bold;">Identik Berlian (Hijau):</span> Kemiripan di atas 95%. Perubahan arsitektur/tipe/parameter Anda tidak berpengaruh banyak.<br>
+      • <span style="color: #F44336; font-weight: bold;">Unik Radikal (Merah):</span> Kemiripan kecil, menandakan dua sistem yang dipilah memiliki watak hasil evaluasi yang sangat kontras arahnya.</p>
+    `;
+    
+    d1.classList.remove('hidden');
+    d2.classList.remove('hidden');
+    d3.classList.add('hidden');
+  } else if (viewMode === 'correlation') {
     c2.style.display = '';
     c3.style.display = '';
     tRes.textContent = '🔗 Correlation Overview';
@@ -468,7 +599,10 @@ function refreshDashboard() {
   const filtered = allExperiments.filter(e => selectedIds.has(e.id));
   const activeMetrics = getActiveMetricsList();
 
-  if (filtered.length === 0 || activeMetrics.length === 0) {
+  const contentArea = document.getElementById('dashboard-content-area');
+  const noSelection = document.getElementById('dashboard-no-selection');
+
+  if (allExperiments.length === 0) {
     document.getElementById('dashboard-empty').classList.remove('hidden');
     document.getElementById('dashboard-main').classList.add('hidden');
     return;
@@ -476,6 +610,15 @@ function refreshDashboard() {
 
   document.getElementById('dashboard-empty').classList.add('hidden');
   document.getElementById('dashboard-main').classList.remove('hidden');
+
+  if (filtered.length === 0 || activeMetrics.length === 0) {
+    if (contentArea) contentArea.classList.add('hidden');
+    if (noSelection) noSelection.classList.remove('hidden');
+    return;
+  }
+
+  if (contentArea) contentArea.classList.remove('hidden');
+  if (noSelection) noSelection.classList.add('hidden');
 
   updateSectionTitles();
 
@@ -490,6 +633,9 @@ function refreshDashboard() {
     renderCorrelationDualAxis(filtered, activeMetrics, labels);
     renderCorrelationDualAxisLoss(filtered, activeMetrics, labels);
     renderCorrelationBubble(filtered, activeMetrics, labels);
+  } else if (viewMode === 'similarity') {
+    renderRadarChart(filtered, activeMetrics, labels);
+    renderSimilarityMatrix(filtered, activeMetrics, labels);
   } else {
     renderLineChart(filtered, activeMetrics, labels);
     renderRadarChart(filtered, activeMetrics, labels);
@@ -664,8 +810,15 @@ function renderLineChart(experiments, activeMetrics, labels) {
 // ─── Radar Chart ─────────────────────────────────────────
 
 function renderRadarChart(experiments, activeMetrics, labels) {
-  const ctx = document.getElementById('radar-chart');
-  if (radarChart) radarChart.destroy();
+  const isSimilarity = viewMode === 'similarity';
+  const targetId = isSimilarity ? 'line-chart' : 'radar-chart';
+  const ctx = document.getElementById(targetId);
+  
+  if (isSimilarity) {
+    if (lineChart) lineChart.destroy();
+  } else {
+    if (radarChart) radarChart.destroy();
+  }
 
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
@@ -687,7 +840,7 @@ function renderRadarChart(experiments, activeMetrics, labels) {
     };
   });
 
-  radarChart = new Chart(ctx, {
+  const config = {
     type: 'radar',
     data: {
       labels: activeMetrics.map(m => labels[m]),
@@ -718,7 +871,13 @@ function renderRadarChart(experiments, activeMetrics, labels) {
         },
       },
     },
-  });
+  };
+
+  if (isSimilarity) {
+    lineChart = new Chart(ctx, config);
+  } else {
+    radarChart = new Chart(ctx, config);
+  }
 }
 
 // ─── Grouped Bar Chart ───────────────────────────────────
@@ -1390,5 +1549,551 @@ function renderCorrelationDualAxisLoss(experiments, activeMetrics, labels) {
         }
       }
     }
+  });
+}
+
+// ─── Similarity Heatmap Matrix ───────────────────────────
+
+function renderSimilarityMatrix(experiments, activeMetrics, labels) {
+  const ctx = document.getElementById('radar-chart');
+  if (radarChart) radarChart.destroy();
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const c = getLAChartColors(isDark);
+  
+  const cols = ['accuracy', 'loss', ...activeMetrics];
+  
+  // Create normalized vector for each experiment
+  const getMetricMax = (metric) => {
+    if (metric === 'cider') return 10.0;
+    if (metric === 'spice') return 1.0;
+    if (metric === 'loss') {
+        const mx = Math.max(...experiments.map(e => parseFloat(e.results.loss) || 0));
+        return mx > 0 ? mx : 1.0;
+    }
+    return 1.0; 
+  };
+  
+  const lossMax = getMetricMax('loss');
+  
+  const vectors = experiments.map(exp => {
+    return cols.map(col => {
+      if (col === 'loss') {
+        const lossVal = parseFloat(exp.results.loss) || 0;
+        return Math.max(0, 1 - (lossVal / lossMax)); // Inverted loss
+      } else {
+        const val = parseFloat(exp.results[col]) || 0;
+        return val / getMetricMax(col);
+      }
+    });
+  });
+
+  // Calculate Cosine Similarity between vector A and vector B
+  const cosineSim = (vecA, vecB) => {
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < vecA.length; i++) {
+        dotProduct += vecA[i] * vecB[i];
+        normA += vecA[i] * vecA[i];
+        normB += vecB[i] * vecB[i];
+    }
+    if (normA === 0 || normB === 0) return 0;
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+  };
+
+  const expNames = experiments.map(e => e.name);
+  const datasets = [];
+  
+  expNames.forEach((nameY, yIdx) => {
+    expNames.forEach((nameX, xIdx) => {
+      const sim = cosineSim(vectors[yIdx], vectors[xIdx]);
+      
+      const hue = ((sim - 0.5) * 2) * 120; // 0.5 to 1.0 maps to 0 to 120 (green)
+      const clampedHue = Math.max(0, Math.min(120, hue));
+      const saturation = 100;
+      const lightness = isDark ? (sim > 0.9 ? 45 : 30) : (sim > 0.9 ? 65 : 85); 
+      const bgCol = `hsla(${clampedHue}, ${saturation}%, ${lightness}%, 0.95)`;
+      
+      datasets.push({
+        label: `${nameY} vs ${nameX}`,
+        data: [{ x: xIdx, y: yIdx, r: 18, _sim: sim, _expY: nameY, _expX: nameX }],
+        backgroundColor: bgCol,
+        borderColor: isDark ? '#1a202c' : '#ffffff',
+        borderWidth: 2,
+      });
+    });
+  });
+
+  radarChart = new Chart(ctx, {
+    type: 'bubble',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      elements: { point: { pointStyle: 'rectRounded' } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: c.tooltipBg, titleColor: c.tooltipTitle, bodyColor: c.tooltipBody,
+          callbacks: {
+            label: (ctx) => {
+              const pt = ctx.raw;
+              return `${pt._expY} >< ${pt._expX}: ${(pt._sim * 100).toFixed(2)}% Mirip`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          min: -0.5, max: expNames.length - 0.5,
+          grid: { display: false },
+          ticks: {
+            stepSize: 1,
+            callback: (val) => expNames[val],
+            color: c.textColor, font: { family:'Inter', size:11, weight: '600' },
+            maxRotation: 45,
+            minRotation: 45
+          }
+        },
+        y: {
+          min: -0.5, max: expNames.length - 0.5,
+          grid: { display: false },
+          ticks: {
+            stepSize: 1,
+            callback: (val) => expNames[val],
+            color: c.textColor, font: { family:'Inter', size:11, weight: '600' }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ─── Baseline Comparison View ──────────────────────────────
+
+let baselineBarChart = null;
+const JOURNAL_BASELINE = {
+  name: 'Jurnal Referensi',
+  results: {
+    bleu_1: 0.492,
+    bleu_2: 0.296,
+    bleu_3: 0.174,
+    bleu_4: 0.101,
+    meteor: 0.163,
+    cider: 0.39,
+    rouge_l: 0.358,
+    spice: 0.108
+  }
+};
+
+function renderBaselineComparison(experiments) {
+  // 1. Calculate top 3 experiments based on average score of METRICS
+  const getMetricMax = (metric) => {
+    if (metric === 'cider') return 10.0;
+    if (metric === 'spice') return 1.0;
+    return 1.0; 
+  };
+
+  const scoredExps = experiments.map(exp => {
+    let sum = 0;
+    let count = 0;
+    METRICS.forEach(m => {
+      const val = parseFloat(exp.results[m]);
+      if (!isNaN(val)) {
+        sum += (val / getMetricMax(m));
+        count++;
+      }
+    });
+    return { ...exp, evalScore: count > 0 ? sum / count : 0 };
+  });
+
+  scoredExps.sort((a, b) => b.evalScore - a.evalScore);
+  const top3 = scoredExps.slice(0, 3);
+  
+  // 2. Determine which metrics we actually have in the top 3
+  const activeMetrics = METRICS.filter(m => 
+    top3.some(e => e.results[m] !== undefined && e.results[m] !== null)
+  );
+
+  renderBaselineTable(top3, activeMetrics);
+  renderBaselineChart(top3, activeMetrics);
+  renderBaselineLineChart(top3, activeMetrics);
+}
+
+function renderBaselineTable(top3, metrics) {
+  const theadTr = document.getElementById('baseline-thead-tr');
+  const tbody = document.getElementById('baseline-tbody');
+  
+  theadTr.innerHTML = '';
+  tbody.innerHTML = '';
+
+  // Header row
+  const thBlank = document.createElement('th');
+  thBlank.textContent = 'Metric';
+  theadTr.appendChild(thBlank);
+
+  const thBase = document.createElement('th');
+  thBase.textContent = JOURNAL_BASELINE.name;
+  theadTr.appendChild(thBase);
+
+  top3.forEach((exp, i) => {
+    const th = document.createElement('th');
+    th.textContent = exp.name + (i === 0 ? ' 🥇' : i === 1 ? ' 🥈' : ' 🥉');
+    theadTr.appendChild(th);
+  });
+
+  // Body rows
+  metrics.forEach(m => {
+    const tr = document.createElement('tr');
+    
+    // Metric Name
+    const tdName = document.createElement('td');
+    tdName.style.fontWeight = 'bold';
+    tdName.textContent = METRIC_LABELS[m];
+    tr.appendChild(tdName);
+
+    // Baseline value
+    const baseVal = JOURNAL_BASELINE.results[m] || 0;
+    const tdBase = document.createElement('td');
+    tdBase.textContent = baseVal.toFixed(4);
+    tr.appendChild(tdBase);
+
+    // Top 3 comparison cell
+    top3.forEach(exp => {
+      const val = parseFloat(exp.results[m]) || 0;
+      const diffInfo = calculateDiff(val, baseVal);
+      
+      const td = document.createElement('td');
+      
+      const valSpan = document.createElement('span');
+      valSpan.className = 'baseline-val';
+      valSpan.textContent = val.toFixed(4);
+      td.appendChild(valSpan);
+
+      const diffSpan = document.createElement('span');
+      diffSpan.style.marginLeft = '8px';
+      diffSpan.style.fontSize = '11px';
+      
+      if (diffInfo.diff > 0.0001) {
+        diffSpan.className = 'diff-positive';
+        diffSpan.textContent = `(+${diffInfo.diff.toFixed(4)} | +${diffInfo.pct}%)`;
+      } else if (diffInfo.diff < -0.0001) {
+        diffSpan.className = 'diff-negative';
+        diffSpan.textContent = `(${diffInfo.diff.toFixed(4)} | ${diffInfo.pct}%)`;
+      } else {
+        diffSpan.className = 'diff-neutral';
+        diffSpan.textContent = `(0.0000 | 0.00%)`;
+      }
+      
+      td.appendChild(diffSpan);
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+function calculateDiff(val, base) {
+  const diff = val - base;
+  if (base === 0) return { diff, pct: (diff > 0 ? 100 : 0).toFixed(2) };
+  const pct = (diff / base) * 100;
+  return { diff, pct: pct.toFixed(2) };
+}
+
+function renderBaselineChart(top3, metrics) {
+  const ctx = document.getElementById('baseline-bar-chart');
+  if (baselineBarChart) baselineBarChart.destroy();
+  
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+  const textColor = isDark ? '#94a3b8' : '#475569';
+
+  const datasets = [];
+  
+  // Baseline Dataset
+  datasets.push({
+    label: JOURNAL_BASELINE.name,
+    data: metrics.map(m => JOURNAL_BASELINE.results[m] || 0),
+    backgroundColor: isDark ? 'rgba(156, 163, 175, 0.4)' : 'rgba(107, 114, 128, 0.4)',
+    borderColor: isDark ? '#9ca3af' : '#6b7280',
+    borderWidth: 1,
+    borderRadius: 4
+  });
+
+  // Top 3 Datasets
+  top3.forEach((exp, idx) => {
+    const color = CHART_COLORS[idx % CHART_COLORS.length];
+    datasets.push({
+      label: exp.name,
+      data: metrics.map(m => parseFloat(exp.results[m]) || 0),
+      backgroundColor: color + 'CC',
+      borderColor: color,
+      borderWidth: 1,
+      borderRadius: 4
+    });
+  });
+
+  baselineBarChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: metrics.map(m => METRIC_LABELS[m]),
+      datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: textColor, font: { family: 'Inter', size: 12 } }
+        },
+        tooltip: {
+          backgroundColor: isDark ? 'rgba(24,27,37,0.95)' : 'rgba(255,255,255,0.95)',
+          titleColor: isDark ? '#e2e8f0' : '#1e293b',
+          bodyColor: isDark ? '#94a3b8' : '#475569',
+          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+          borderWidth: 1, padding: 12, cornerRadius: 8,
+          titleFont: { family: 'Inter', weight: '600' },
+          bodyFont: { family: 'Inter' },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: textColor, font: { family: 'Inter', size: 11 } },
+        },
+        y: {
+          grid: { color: gridColor },
+          ticks: { color: textColor, font: { family: 'Inter', size: 11 } },
+          beginAtZero: true,
+        },
+      },
+    },
+  });
+}
+
+function renderBaselineLineChart(top3, metrics) {
+  const ctx = document.getElementById('baseline-line-chart');
+  // Need global ref to destroy re-renders
+  if (window.baselineLineChartInst) window.baselineLineChartInst.destroy();
+  
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+  const textColor = isDark ? '#94a3b8' : '#475569';
+
+  const datasets = [];
+  
+  // Baseline Dataset
+  datasets.push({
+    label: JOURNAL_BASELINE.name,
+    data: metrics.map(m => (JOURNAL_BASELINE.results[m] || 0) * 100), // Scale to percentage for visual contrast initially 
+    borderColor: isDark ? '#9ca3af' : '#6b7280',
+    backgroundColor: 'transparent',
+    borderWidth: 3,
+    borderDash: [5, 5],
+    pointRadius: 6,
+    pointBackgroundColor: isDark ? '#4b5563' : '#9ca3af',
+  });
+
+  // Top 3 Datasets
+  top3.forEach((exp, idx) => {
+    const color = CHART_COLORS[idx % CHART_COLORS.length];
+    datasets.push({
+      label: exp.name,
+      data: metrics.map(m => (parseFloat(exp.results[m]) || 0) * 100), // percentage scale
+      borderColor: color,
+      backgroundColor: color + '20',
+      borderWidth: 2.5,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      pointBackgroundColor: isDark ? '#1a1b2e' : '#ffffff',
+      pointBorderColor: color,
+      pointBorderWidth: 2,
+      tension: 0.3,
+      fill: true
+    });
+  });
+
+  window.baselineLineChartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: metrics.map(m => METRIC_LABELS[m]),
+      datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: textColor, font: { family: 'Inter', size: 12 }, usePointStyle: true }
+        },
+        tooltip: {
+          backgroundColor: isDark ? 'rgba(24,27,37,0.95)' : 'rgba(255,255,255,0.95)',
+          titleColor: isDark ? '#e2e8f0' : '#1e293b',
+          bodyColor: isDark ? '#94a3b8' : '#475569',
+          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+          borderWidth: 1, padding: 12, cornerRadius: 8,
+          titleFont: { family: 'Inter', weight: '600' },
+          bodyFont: { family: 'Inter' },
+          callbacks: {
+             label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y / 100).toFixed(4)}`
+          }
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: textColor, font: { family: 'Inter', size: 11 } },
+        },
+        y: {
+          grid: { color: gridColor },
+          ticks: { 
+            color: textColor, font: { family: 'Inter', size: 11 },
+            callback: (val) => (val / 100).toFixed(2)
+          },
+          beginAtZero: true,
+        },
+      },
+    },
+  });
+}
+
+// ─── Empirical Margin Analysis View ─────────────────────
+
+function renderSignificanceView(experiments) {
+  const cardsContainer = document.getElementById('sig-cards-container');
+  const theadTr = document.getElementById('sig-thead-tr');
+  const tbody = document.getElementById('sig-tbody');
+
+  cardsContainer.innerHTML = '';
+  theadTr.innerHTML = '';
+  tbody.innerHTML = '';
+
+  // 1. Identify Top 3 Models again (similar to baseline)
+  const getMetricMax = (metric) => {
+    if (metric === 'cider') return 10.0;
+    if (metric === 'spice') return 1.0;
+    return 1.0; 
+  };
+
+  const scoredExps = experiments.map(exp => {
+    let sum = 0;
+    let count = 0;
+    METRICS.forEach(m => {
+      const val = parseFloat(exp.results[m]);
+      if (!isNaN(val)) {
+        sum += (val / getMetricMax(m));
+        count++;
+      }
+    });
+    return { ...exp, evalScore: count > 0 ? sum / count : 0 };
+  });
+
+  scoredExps.sort((a, b) => b.evalScore - a.evalScore);
+  const top3 = scoredExps.slice(0, 3);
+  
+  const activeMetrics = METRICS.filter(m => 
+    top3.some(e => e.results[m] !== undefined && e.results[m] !== null)
+  );
+
+  // 2. Define Significance Thresholds (Heuristics)
+  // General rule: > 0.015 absolute diff is considered superior for typical NLP metrics 0-1 range
+  const isSuperior = (val, base) => (val - base) > 0.015;
+  const isInferior = (val, base) => (val - base) < -0.015;
+  
+  // 3. Evaluate each Top 3 Model
+  const evaluations = top3.map(exp => {
+    let superiorCount = 0;
+    let inferiorCount = 0;
+    let tieCount = 0;
+
+    const metricResults = {}; // metric => status string
+
+    activeMetrics.forEach(m => {
+      const val = parseFloat(exp.results[m]) || 0;
+      const baseVal = JOURNAL_BASELINE.results[m] || 0;
+      
+      if (isSuperior(val, baseVal)) {
+        superiorCount++;
+        metricResults[m] = '🟢 Superior';
+      } else if (isInferior(val, baseVal)) {
+        inferiorCount++;
+        metricResults[m] = '🔴 Inferior';
+      } else {
+        tieCount++;
+        metricResults[m] = '🟡 Marginal';
+      }
+    });
+
+    return { exp, superiorCount, inferiorCount, tieCount, metricResults };
+  });
+
+  // 4. Render 3 Summary Cards
+  evaluations.forEach((evalData, idx) => {
+    const isWin = evalData.superiorCount > evalData.inferiorCount;
+    const card = document.createElement('div');
+    card.className = 'sig-card';
+    
+    // Medal logic
+    let medal = '🥉';
+    if (idx === 0) medal = '🥇';
+    if (idx === 1) medal = '🥈';
+
+    card.innerHTML = `
+      <div class="sig-card-header">
+        <div class="sig-card-title">${medal} ${evalData.exp.name}</div>
+        <div style="font-size: 20px;">${isWin ? '🏆' : '⚖️'}</div>
+      </div>
+      <div class="sig-score">${evalData.superiorCount} <span style="font-size: 16px; color: var(--text-muted); font-weight: normal;">/ ${activeMetrics.length} Metrics</span></div>
+      <div class="sig-score-desc">
+        Model ini terbukti secara empiris <strong>Superior</strong> (Melampaui margin +0.015) pada ${evalData.superiorCount} metrik melawan Jurnal Referensi.<br><br>
+        Tie: ${evalData.tieCount} | Inferior: ${evalData.inferiorCount}
+      </div>
+    `;
+    cardsContainer.appendChild(card);
+  });
+
+  // 5. Render Proxy Confidence Matrix
+  // Header
+  const thBlank = document.createElement('th');
+  thBlank.textContent = 'Evaluation Metric';
+  thBlank.style.textAlign = 'left';
+  theadTr.appendChild(thBlank);
+
+  evaluations.forEach(evalData => {
+    const th = document.createElement('th');
+    th.textContent = evalData.exp.name;
+    theadTr.appendChild(th);
+  });
+
+  // Rows
+  activeMetrics.forEach(m => {
+    const tr = document.createElement('tr');
+    
+    const tdName = document.createElement('td');
+    tdName.style.fontWeight = 'bold';
+    tdName.style.textAlign = 'left';
+    tdName.textContent = METRIC_LABELS[m];
+    tr.appendChild(tdName);
+
+    evaluations.forEach(evalData => {
+      const td = document.createElement('td');
+      const status = evalData.metricResults[m];
+      td.textContent = status;
+      
+      if (status.includes('Superior')) {
+        td.style.color = '#10b981'; // emerald
+        td.style.fontWeight = '700';
+      } else if (status.includes('Inferior')) {
+        td.style.color = '#ef4444'; // red
+      } else {
+        td.style.color = 'var(--text-muted)';
+      }
+      
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
   });
 }

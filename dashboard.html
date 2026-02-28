@@ -13,6 +13,9 @@
   <!-- Toolbar -->
   <header id="toolbar">
     <div class="toolbar-left">
+      <button id="btn-toggle-sidebar" class="toolbar-btn small" title="Toggle Navigation Sidebar">
+        <span class="btn-icon">☰</span>
+      </button>
       <h1 class="app-title">
         <span class="icon">📊</span> HyperTree Dashboard
       </h1>
@@ -33,6 +36,10 @@
       <button id="btn-correlation" class="toolbar-btn" title="Toggle Correlation view">
         <span class="btn-icon">🔗</span> Correlation
       </button>
+      <div class="toolbar-divider"></div>
+      <button id="btn-similarity" class="toolbar-btn" title="Toggle Similarity view">
+        <span class="btn-icon">👯</span> Similarity
+      </button>
     </div>
     <div class="toolbar-right">
       <button id="btn-theme" class="toolbar-btn small" title="Toggle theme">
@@ -41,8 +48,26 @@
     </div>
   </header>
 
-  <!-- Dashboard Content -->
-  <main id="dashboard-content">
+  <!-- Dashboard Layout Container (Sidebar + Content) -->
+  <div class="dashboard-layout">
+    
+    <!-- Navigation Sidebar -->
+    <nav id="app-sidebar" class="app-sidebar">
+      <div class="sidebar-menu">
+        <button id="nav-explore" class="sidebar-nav-btn active">
+          <span class="icon">📊</span> Visualisasi Eksplorasi
+        </button>
+        <button id="nav-baseline" class="sidebar-nav-btn">
+          <span class="icon">🆚</span> Pertarungan Baseline
+        </button>
+        <button id="nav-significance" class="sidebar-nav-btn">
+          <span class="icon">🧪</span> Empirical Margin Analysis
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="dashboard-content">
     <div id="dashboard-empty" class="dashboard-empty">
       <div class="empty-icon">📊</div>
       <p>No experiment data loaded.</p>
@@ -59,7 +84,13 @@
       </aside>
 
       <!-- Main Content -->
-      <div class="dashboard-content-area">
+      <div id="dashboard-no-selection" class="dashboard-empty hidden" style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-card); margin-left: 16px;">
+        <div class="empty-icon" style="font-size: 48px; margin-bottom: 16px;">🖱️</div>
+        <p style="font-size: 18px; font-weight: 500; color: var(--text-primary);">Tidak ada data yang dipilih</p>
+        <p class="sub" style="color: var(--text-secondary); margin-top: 8px;">Silakan centang minimal satu eksperimen dan satu metrik di panel filter kiri.</p>
+      </div>
+
+      <div id="dashboard-content-area" class="dashboard-content-area">
         <!-- Results Table -->
         <section class="dashboard-section">
           <h2 class="section-title" id="title-results">🏆 Experiment Results</h2>
@@ -103,9 +134,100 @@
           </section>
         </div>
       </div><!-- end dashboard-content-area -->
-    </div>
-  </main>
+    </div> <!-- /#dashboard-main -->
 
-  <script type="module" src="/src/dashboard.js"></script>
+    <!-- Baseline Comparison View -->
+    <div id="baseline-main" class="baseline-main hidden">
+      <div class="baseline-header">
+        <h2 id="title-baseline"><span class="icon">🆚</span> Top 3 Models vs Jurnal Reference</h2>
+        <p class="baseline-desc">Mengkomparasikan performa 3 hyperparameter terbaik Anda secara statik melawan spesifikasi rujukan paper akademik.</p>
+      </div>
+
+      <div class="chart-section baseline-table-container">
+        <h3>Tabel Komparasi Signifikansi</h3>
+        <table id="baseline-table" class="results-table">
+          <thead>
+            <tr id="baseline-thead-tr">
+              <!-- Dynamically populated -->
+            </tr>
+          </thead>
+          <tbody id="baseline-tbody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-section dashboard-section">
+          <h3 class="section-title">📉 Evals vs Baseline (Line Chart)</h3>
+          <div class="chart-container">
+            <canvas id="baseline-line-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-section dashboard-section">
+          <h3 class="section-title">📊 Histogram Evals vs Baseline (Bar Chart)</h3>
+          <div class="chart-container">
+            <canvas id="baseline-bar-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div> <!-- /#baseline-main -->
+
+    <!-- Significance Testing View -->
+    <div id="significance-main" class="baseline-main hidden">
+      <div class="baseline-header">
+        <h2 id="title-significance"><span class="icon">🧪</span> Empirical Margin Analysis</h2>
+        <p class="baseline-desc">Menganalisis margin empiris (Heuristic Significance Proxy) dari selisih performa model Anda melawan Jurnal Referensi.</p>
+      </div>
+
+      <!-- Top 3 Conclusion Cards -->
+      <div id="sig-cards-container" class="sig-cards">
+        <!-- Dynamically populated -->
+      </div>
+
+      <div class="chart-section baseline-table-container">
+        <h3 style="margin-bottom: 8px;">Tabel Heuristic Margin Proxy</h3>
+        <p class="baseline-desc" style="font-size: 13px; margin-bottom: 24px; margin-top: 0;">
+          🟢 <strong>Superior</strong> (Melampaui margin) &nbsp;|&nbsp; 
+          🟡 <strong>Marginal / Tie</strong> (Selisih dalam margin error) &nbsp;|&nbsp; 
+          🔴 <strong>Inferior</strong> (Kalah telak)
+        </p>
+        <table id="sig-table" class="results-table" style="text-align: center;">
+          <thead>
+            <tr id="sig-thead-tr">
+              <!-- Dynamically populated -->
+            </tr>
+          </thead>
+          <tbody id="sig-tbody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Methodology Accordion -->
+      <details class="chart-desc" style="margin-top: 32px; background: var(--bg-card); padding: 16px; border-radius: var(--radius); border: 1px solid var(--border-card);">
+        <summary style="font-weight: 600; cursor: pointer; color: var(--text-primary);">📖 Metodologi: Heuristic Significance Proxy</summary>
+        <div class="desc-content" style="margin-top: 16px; color: var(--text-secondary); font-size: 13px; line-height: 1.6;">
+          <p>Karena pengujian statistik murni (seperti <em>Paired T-Test</em>) membutuhkan distribusi baris data raw yang tidak tersedia di agregat metrik evaluasi final, analisis beralih pada pendekatan <strong>Heuristic Margin Proxy</strong>.</p>
+          <br>
+          <p><strong>Rumus Keputusan Heuristik:</strong></p>
+          <ul style="margin-left: 20px; list-style-type: disc;">
+            <li>Biarkan Δ = Skor Model - Skor Baseline Jurnal.</li>
+            <li><strong>🟢 Superior:</strong> Δ &gt; 0.015. Skor melampaui jurnal lebih dari <em>Margin of Error</em> 1.5% (kemenangan solid/empiris).</li>
+            <li><strong>🟡 Marginal / Tie:</strong> -0.015 &le; Δ &le; 0.015. Selisih sangat tipis berada dalam zona noise komputasional <em>(random seed bounds)</em>. Dianggap setara.</li>
+            <li><strong>🔴 Inferior:</strong> Δ &lt; -0.015. Model tertinggal solid dari Jurnal Referensi.</li>
+          </ul>
+          <br>
+          <p><em>*Ambang batas $0.015$ diadopsi sebagai rule-of-thumb konservatif lazim dalam makalah metrik generasi teks NLP agar klaim "State-of-the-Art" dapat dipertanggungjawabkan.</em></p>
+        </div>
+      </details>
+
+    </div> <!-- /#significance-main -->
+
+  </main>
+  </div> <!-- /.dashboard-layout -->
+
+  <script src="src/dashboard.js" type="module"></script>
 </body>
 </html>

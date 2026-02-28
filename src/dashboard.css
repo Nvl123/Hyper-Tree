@@ -189,15 +189,82 @@ html, body {
 
 .btn-icon { font-size: 14px; }
 
+/* ─── Dashboard Layout & Sidebar ────────────────────────── */
+
+.dashboard-layout {
+  display: flex;
+  margin-top: 56px;
+  height: calc(100vh - 56px);
+  overflow: hidden;
+  width: 100%;
+}
+
+.app-sidebar {
+  width: 260px;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border-card);
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--transition), width var(--transition);
+  z-index: 50;
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.app-sidebar.collapsed {
+  transform: translateX(-100%);
+  width: 0;
+  border-right: none;
+}
+
+.sidebar-menu {
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.sidebar-nav-btn:hover {
+  background: var(--btn-hover-bg);
+  color: var(--text-primary);
+}
+
+.sidebar-nav-btn.active {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.sidebar-nav-btn .icon {
+  font-size: 18px;
+}
+
 /* ─── Dashboard Content ──────────────────────────────── */
 #dashboard-content {
-  margin-top: 56px;
+  flex: 1;
   padding: 32px 40px;
   max-width: 1600px;
-  margin-left: auto;
-  margin-right: auto;
   overflow-y: auto;
-  height: calc(100vh - 56px);
+  min-width: 0;
 }
 
 /* ─── Empty State ─────────────────────────────────────── */
@@ -566,6 +633,66 @@ html, body {
   }
 }
 
+@media (max-width: 768px) {
+  .app-sidebar {
+    position: absolute;
+    height: 100%;
+    transform: translateX(-100%);
+  }
+  .app-sidebar.mobile-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px var(--shadow-card);
+  }
+}
+
+/* ─── Baseline Comparison View ────────────────────────── */
+.baseline-main {
+  animation: fadeIn 0.4s ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.baseline-header {
+  margin-bottom: 8px;
+}
+
+.baseline-header h2 {
+  font-size: 24px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.baseline-desc {
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.baseline-table-container {
+  overflow-x: auto;
+}
+
+/* Color definitions inline for baseline tables */
+.diff-positive {
+  color: #10b981;
+  font-weight: 700;
+}
+.diff-negative {
+  color: #ef4444;
+  font-weight: 700;
+}
+.diff-neutral {
+  color: var(--text-muted);
+}
+.baseline-val {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 /* ─── Scrollbar ───────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -596,3 +723,55 @@ body {
 
 /* ─── Utilities ───────────────────────────────────────── */
 .hidden { display: none !important; }
+
+/* ─── Significance Testing View ───────────────────────── */
+.sig-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.sig-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: 0 4px 24px var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sig-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.sig-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.sig-score {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--gold);
+}
+
+.sig-score-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+@media (max-width: 1100px) {
+  .sig-cards { grid-template-columns: 1fr; }
+}
