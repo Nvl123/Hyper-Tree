@@ -4,9 +4,9 @@ import {
   createRootNode, createChildNode,
   updateNode, deleteNode, duplicateNode,
   exportToJSON, importFromJSON,
-  getNode,
+  getNode, getEffectiveParams
 } from './store.js';
-import { initCanvas, renderTree } from './tree.js';
+import { initCanvas, renderTree, panToNode } from './tree.js';
 import { initModal, openEditModal } from './modal.js';
 import { exportTreeAsPng } from './export.js';
 import { initSidebar } from './sidebar.js';
@@ -39,6 +39,109 @@ document.getElementById('btn-save-file').addEventListener('click', async () => {
 document.getElementById('btn-open-file').addEventListener('click', async () => {
   const success = await importFromJSON();
   if (success) render();
+});
+
+// Search nodes
+let searchMatches = [];
+let searchIndex = -1;
+let lastQuery = '';
+
+function updateSearchUI() {
+  const counter = document.getElementById('search-counter');
+  const btnPrev = document.getElementById('btn-search-prev');
+  const btnNext = document.getElementById('btn-search-next');
+  
+  if (searchMatches.length > 0) {
+    counter.textContent = `${searchIndex + 1}/${searchMatches.length}`;
+    counter.classList.remove('hidden');
+    btnPrev.classList.remove('hidden');
+    btnNext.classList.remove('hidden');
+  } else {
+    counter.classList.add('hidden');
+    btnPrev.classList.add('hidden');
+    btnNext.classList.add('hidden');
+  }
+}
+
+function handleSearchNode() {
+  const query = document.getElementById('input-search-node').value.trim().toLowerCase();
+  if (!query) {
+    searchMatches = [];
+    searchIndex = -1;
+    lastQuery = '';
+    updateSearchUI();
+    return;
+  }
+
+  // If query is the same, just go to next
+  if (query === lastQuery && searchMatches.length > 0) {
+    handleSearchNext();
+    return;
+  }
+
+  const roots = getRoots();
+  const allNodes = [];
+  
+  function flattenNodes(nodes) {
+    for (const node of nodes) {
+      allNodes.push(node);
+      if (node.children?.length) {
+        flattenNodes(node.children);
+      }
+    }
+  }
+  flattenNodes(roots);
+
+  // Match on node name or parameters
+  searchMatches = allNodes.filter(n => {
+    if (n.name.toLowerCase().includes(query)) return true;
+    const params = getEffectiveParams(n.id) || {};
+    return Object.entries(params).some(([k, v]) => 
+      k.toLowerCase().includes(query) || String(v).toLowerCase().includes(query)
+    );
+  });
+  
+  lastQuery = query;
+
+  if (searchMatches.length > 0) {
+     searchIndex = 0;
+     panToNode(searchMatches[searchIndex].id);
+     updateSearchUI();
+  } else {
+     searchIndex = -1;
+     updateSearchUI();
+     // Pulse red if not found
+     const input = document.getElementById('input-search-node');
+     input.style.borderColor = 'var(--danger)';
+     setTimeout(() => { input.style.borderColor = ''; }, 1000);
+  }
+}
+
+function handleSearchNext() {
+  if (searchMatches.length === 0) return;
+  searchIndex = (searchIndex + 1) % searchMatches.length;
+  panToNode(searchMatches[searchIndex].id);
+  updateSearchUI();
+}
+
+function handleSearchPrev() {
+  if (searchMatches.length === 0) return;
+  searchIndex = (searchIndex - 1 + searchMatches.length) % searchMatches.length;
+  panToNode(searchMatches[searchIndex].id);
+  updateSearchUI();
+}
+
+document.getElementById('btn-search-node').addEventListener('click', handleSearchNode);
+document.getElementById('btn-search-next').addEventListener('click', handleSearchNext);
+document.getElementById('btn-search-prev').addEventListener('click', handleSearchPrev);
+
+document.getElementById('input-search-node').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    handleSearchNode();
+  } else {
+     // Clear error border on type
+     e.target.style.borderColor = '';
+  }
 });
 
 // Theme toggle

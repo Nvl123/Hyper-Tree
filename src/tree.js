@@ -228,6 +228,37 @@ export function getScale() {
   return scale;
 }
 
+export function panToNode(nodeId) {
+  const card = document.querySelector(`.node-card[data-id="${nodeId}"]`);
+  if (!card) return;
+
+  const wrapperElement = document.getElementById('canvas-wrapper');
+  const viewWidth = wrapperElement.clientWidth;
+  const viewHeight = wrapperElement.clientHeight;
+
+  const cardRect = card.getBoundingClientRect();
+  
+  // Calculate the center of the card relative to the unscaled canvas origin
+  const canvasRect = canvas.getBoundingClientRect();
+  const cardCenterX = (cardRect.left + cardRect.width / 2 - canvasRect.left) / scale;
+  const cardCenterY = (cardRect.top + cardRect.height / 2 - canvasRect.top) / scale;
+
+  panX = Math.round((viewWidth / 2) - (cardCenterX * scale));
+  panY = Math.round((viewHeight / 2) - (cardCenterY * scale));
+  
+  applyTransform();
+
+  // Highlight
+  card.classList.remove('node-highlight-match');
+  // Trigger reflow to restart animation
+  void card.offsetWidth;
+  card.classList.add('node-highlight-match');
+  
+  setTimeout(() => {
+    card.classList.remove('node-highlight-match');
+  }, 1000); // matches animation duration
+}
+
 // ─── Render full tree ────────────────────────────────────
 
 let currentOnAction = null;

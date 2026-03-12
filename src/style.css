@@ -174,6 +174,39 @@ html, body {
   white-space: nowrap;
 }
 
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar-input {
+  padding: 6px 12px;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  background: var(--input-focus-bg);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 13px;
+  outline: none;
+  transition: all var(--transition);
+  width: 180px;
+}
+
+.toolbar-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+  width: 220px;
+}
+
+.search-counter {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 0 4px;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
 .toolbar-btn:hover {
   background: var(--btn-hover-bg);
   color: var(--text-primary);
@@ -300,6 +333,31 @@ html, body {
   stroke-dasharray: 8 4;
 }
 
+/* ─── Floating Controls ───────────────────────────────── */
+.floating-controls {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--toolbar-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px var(--shadow-card);
+  z-index: 50;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.floating-controls .toolbar-btn {
+  background: transparent;
+}
+.floating-controls .toolbar-btn:hover {
+  background: var(--btn-hover-bg);
+}
+
 /* ─── Empty State ─────────────────────────────────────── */
 #empty-state {
   position: absolute;
@@ -359,6 +417,17 @@ html, body {
   border-color: var(--depth-border, var(--border-glow));
   box-shadow: 0 8px 32px var(--shadow-card-hover), 0 0 20px var(--depth-bg, var(--accent-glow));
   transform: translateY(-2px);
+}
+
+@keyframes nodeHighlightPulse {
+  0% { box-shadow: 0 0 0 0 var(--accent); border-color: var(--accent); transform: scale(1); }
+  50% { box-shadow: 0 0 0 10px var(--accent-glow); border-color: var(--accent); transform: scale(1.03); }
+  100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); border-color: var(--depth-border, var(--border-card)); transform: scale(1); }
+}
+
+.node-highlight-match {
+  animation: nodeHighlightPulse 1s ease-in-out;
+  border-color: var(--accent) !important;
 }
 
 /* Node Header */

@@ -18,6 +18,14 @@
       </h1>
     </div>
     <div class="toolbar-center">
+      <div class="search-container">
+        <input type="text" id="input-search-node" class="toolbar-input" placeholder="Search node..." autocomplete="off" />
+        <span id="search-counter" class="search-counter hidden">0/0</span>
+        <button id="btn-search-prev" class="toolbar-btn small hidden" title="Previous match">↑</button>
+        <button id="btn-search-next" class="toolbar-btn small hidden" title="Next match">↓</button>
+        <button id="btn-search-node" class="toolbar-btn small" title="Search nodes">🔍</button>
+      </div>
+      <div class="toolbar-divider"></div>
       <button id="btn-add-root" class="toolbar-btn primary">
         <span class="btn-icon">＋</span> Add Root Node
       </button>
@@ -47,12 +55,6 @@
       </button>
       <div class="toolbar-divider"></div>
       <button id="btn-toggle-grid" class="toolbar-btn small" title="Toggle Grid"><span class="btn-icon">▦</span></button>
-      <div class="toolbar-divider"></div>
-      <button id="btn-zoom-in" class="toolbar-btn small" title="Zoom In">＋</button>
-      <span id="zoom-level" class="zoom-label">100%</span>
-      <button id="btn-zoom-out" class="toolbar-btn small" title="Zoom Out">−</button>
-      <button id="btn-zoom-reset" class="toolbar-btn small" title="Reset Zoom">⟲</button>
-      <button id="btn-recenter" class="toolbar-btn small" title="Recenter View">⛶</button>
     </div>
   </header>
 
@@ -62,6 +64,17 @@
       <svg id="connections" xmlns="http://www.w3.org/2000/svg"></svg>
       <div id="tree-container"></div>
     </div>
+    
+    <!-- Floating Layout Controls -->
+    <div class="floating-controls">
+      <button id="btn-recenter" class="toolbar-btn small" title="Recenter View">⛶</button>
+      <div class="toolbar-divider"></div>
+      <button id="btn-zoom-in" class="toolbar-btn small" title="Zoom In">＋</button>
+      <span id="zoom-level" class="zoom-label">100%</span>
+      <button id="btn-zoom-out" class="toolbar-btn small" title="Zoom Out">−</button>
+      <button id="btn-zoom-reset" class="toolbar-btn small" title="Reset Zoom">⟲</button>
+    </div>
+
     <!-- Empty state -->
     <div id="empty-state">
       <div class="empty-icon">🌳</div>
