@@ -11,6 +11,11 @@ import { initModal, openEditModal } from './modal.js';
 import { exportTreeAsPng } from './export.js';
 import { initSidebar } from './sidebar.js';
 
+const compareState = {
+  active: false,
+  selectedIds: []
+};
+
 // ─── Initialize ──────────────────────────────────────────
 
 load();
@@ -18,6 +23,7 @@ initCanvas();
 initModal();
 initSidebar();
 initTheme();
+initCompareFeature();
 render();
 
 // ─── Toolbar ─────────────────────────────────────────────
@@ -348,6 +354,148 @@ function removeNode(id, nodes) {
 
 function render() {
   renderTree(getRoots(), handleAction);
+  syncCompareSelection();
+  updateCompareUI();
 }
 
 window.addEventListener('resize', () => render());
+
+// ─── Node Compare ───────────────────────────────────────
+
+function initCompareFeature() {
+  const toggleBtn = document.getElementById('btn-compare-toggle');
+  const clearBtn = document.getElementById('btn-compare-clear');
+  const treeContainer = document.getElementById('tree-container');
+
+  if (!toggleBtn || !clearBtn || !treeContainer) return;
+
+  toggleBtn.addEventListener('click', () => {
+    compareState.active = !compareState.active;
+    if (!compareState.active) {
+      compareState.selectedIds = [];
+    }
+    updateCompareUI();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    compareState.selectedIds = [];
+    updateCompareUI();
+  });
+
+  treeContainer.addEventListener('click', (e) => {
+    if (!compareState.active) return;
+    if (e.target.closest('button, input, textarea, select, a')) return;
+
+    const card = e.target.closest('.node-card');
+    if (!card) return;
+
+    const nodeId = card.dataset.id;
+    if (!nodeId) return;
+
+    toggleCompareNode(nodeId);
+    updateCompareUI();
+  });
+}
+
+function toggleCompareNode(nodeId) {
+  const idx = compareState.selectedIds.indexOf(nodeId);
+  if (idx >= 0) {
+    compareState.selectedIds.splice(idx, 1);
+    return;
+  }
+
+  if (compareState.selectedIds.length >= 2) {
+    compareState.selectedIds.shift();
+  }
+  compareState.selectedIds.push(nodeId);
+}
+
+function syncCompareSelection() {
+  compareState.selectedIds = compareState.selectedIds.filter((id) => !!getNode(id));
+}
+
+function updateCompareUI() {
+  const toggleBtn = document.getElementById('btn-compare-toggle');
+  const panel = document.getElementById('compare-panel');
+  const nodeAEl = document.getElementById('compare-node-a');
+  const nodeBEl = document.getElementById('compare-node-b');
+  const resultsEl = document.getElementById('compare-results');
+
+  if (!toggleBtn || !panel || !nodeAEl || !nodeBEl || !resultsEl) return;
+
+  toggleBtn.classList.toggle('active', compareState.active);
+  panel.classList.toggle('hidden', !compareState.active);
+
+  const nodeA = compareState.selectedIds[0] ? getNode(compareState.selectedIds[0]) : null;
+  const nodeB = compareState.selectedIds[1] ? getNode(compareState.selectedIds[1]) : null;
+
+  nodeAEl.textContent = `Node 1: ${nodeA ? nodeA.name : '-'}`;
+  nodeBEl.textContent = `Node 2: ${nodeB ? nodeB.name : '-'}`;
+
+  document.querySelectorAll('.node-card').forEach((card) => {
+    card.classList.toggle('compare-selected-card', compareState.selectedIds.includes(card.dataset.id));
+  });
+
+  if (!compareState.active) return;
+  if (!nodeA || !nodeB) {
+    resultsEl.textContent = 'Pilih 2 node untuk melihat perbedaan.';
+    return;
+  }
+
+  const diffs = getParamDiff(compareState.selectedIds[0], compareState.selectedIds[1]);
+  if (diffs.length === 0) {
+    resultsEl.textContent = 'Tidak ada perbedaan hyperparameter.';
+    return;
+  }
+
+  const nodeAName = escapeHtml(nodeA.name || 'Node 1');
+  const nodeBName = escapeHtml(nodeB.name || 'Node 2');
+  const rowsHtml = diffs.map((diff) => `
+    <tr>
+      <td>${escapeHtml(diff.key)}</td>
+      <td>${escapeHtml(diff.aValue)}</td>
+      <td>${escapeHtml(diff.bValue)}</td>
+    </tr>
+  `).join('');
+
+  resultsEl.innerHTML = `
+    <table class="compare-diff-table">
+      <thead>
+        <tr>
+          <th>Hyperparameter</th>
+          <th>${nodeAName}</th>
+          <th>${nodeBName}</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  `;
+}
+
+function getParamDiff(nodeAId, nodeBId) {
+  const paramsA = getEffectiveParams(nodeAId) || {};
+  const paramsB = getEffectiveParams(nodeBId) || {};
+  const allKeys = new Set([...Object.keys(paramsA), ...Object.keys(paramsB)]);
+  const diffs = [];
+
+  for (const key of [...allKeys].sort()) {
+    const hasA = Object.prototype.hasOwnProperty.call(paramsA, key);
+    const hasB = Object.prototype.hasOwnProperty.call(paramsB, key);
+    const valA = hasA ? String(paramsA[key]) : '(tidak ada)';
+    const valB = hasB ? String(paramsB[key]) : '(tidak ada)';
+    if (!hasA || !hasB || valA !== valB) {
+      diffs.push({ key, aValue: valA, bValue: valB });
+    }
+  }
+
+  return diffs;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}

@@ -358,6 +358,144 @@ html, body {
   background: var(--btn-hover-bg);
 }
 
+.floating-compare {
+  position: absolute;
+  bottom: 92px;
+  left: 24px;
+  z-index: 51;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.compare-panel {
+  width: min(360px, calc(100vw - 48px));
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--toolbar-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-card);
+  box-shadow: 0 4px 16px var(--shadow-card);
+}
+
+.compare-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.compare-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.compare-selected {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.compare-selected span {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+.compare-results {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  background: var(--input-focus-bg);
+  padding: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.compare-result-item {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border-card);
+}
+
+.compare-result-item:last-child {
+  border-bottom: none;
+}
+
+.compare-result-key {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.compare-result-values {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.compare-result-a {
+  color: var(--danger);
+}
+
+.compare-result-b {
+  color: var(--accent);
+}
+
+.compare-diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.compare-diff-table th,
+.compare-diff-table td {
+  border: 1px solid var(--border-card);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.compare-diff-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--toolbar-bg);
+  backdrop-filter: blur(10px);
+  color: var(--text-primary);
+  font-weight: 700;
+  z-index: 2;
+  box-shadow: 0 1px 0 var(--border-card);
+}
+
+.compare-diff-table tbody td:first-child {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.node-card.compare-selected-card {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-glow),
+              0 8px 24px var(--shadow-card-hover) !important;
+}
+
+@media (max-width: 900px) {
+  .floating-compare {
+    bottom: 88px;
+    left: 16px;
+  }
+
+  .floating-controls {
+    left: 16px;
+    bottom: 16px;
+  }
+}
+
 /* ─── Empty State ─────────────────────────────────────── */
 #empty-state {
   position: absolute;

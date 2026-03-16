@@ -64,6 +64,22 @@
       <svg id="connections" xmlns="http://www.w3.org/2000/svg"></svg>
       <div id="tree-container"></div>
     </div>
+
+    <!-- Floating Compare Controls -->
+    <div class="floating-compare">
+      <button id="btn-compare-toggle" class="toolbar-btn" title="Compare two nodes">⚖ Compare 2 Nodes</button>
+      <div id="compare-panel" class="compare-panel hidden">
+        <div class="compare-panel-header">
+          <span class="compare-panel-title">Hyperparameter Diff</span>
+          <button id="btn-compare-clear" class="toolbar-btn small" title="Clear selection">↺</button>
+        </div>
+        <div class="compare-selected">
+          <span id="compare-node-a">Node A: -</span>
+          <span id="compare-node-b">Node B: -</span>
+        </div>
+        <div id="compare-results" class="compare-results">Pilih 2 node untuk melihat perbedaan.</div>
+      </div>
+    </div>
     
     <!-- Floating Layout Controls -->
     <div class="floating-controls">
