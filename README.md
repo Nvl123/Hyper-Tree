@@ -14,10 +14,10 @@
 
 - **Buat node root & child** — Bangun hierarki eksperimen dengan parameter yang diwariskan dari parent ke child
 - **Drag & drop node** — Geser node secara bebas di canvas, koneksi garis mengikuti secara otomatis (seperti Figma/draw.io)
-- **Inheritance parameter** — Child node otomatis mewarisi parameter parent, bisa di-override per node
-- **Shared parameter highlight** — Parameter yang sama antar node ditandai dengan warna yang menarik
-- **Duplikasi node** — Copy node tanpa menyertakan child-nya
-- **Collapse/expand** — Sembunyikan subtree untuk fokus pada bagian tertentu
+- [x] **Compare 2 Nodes** — Bandingkan dua node secara langsung untuk melihat perbedaan hyperparameter dan metrik hasil
+- [x] **Expand/Collapse** — Sembunyikan atau tampilkan subtree untuk fokus pada bagian tertentu
+- [x] **Search Node** — Cari node berdasarkan nama atau nilai hyperparameter dengan mudah
+- [x] **Grid System** — Toggle grid background untuk membantu perataan node secara manual
 
 ### 📊 Dashboard Analitik
 
@@ -38,15 +38,16 @@
 
 - **Save/Load JSON** — Simpan tree ke file JSON dan buka kembali
 - **Save to same file** — Langsung overwrite file yang sedang dibuka (File System Access API)
-- **Export PNG** — Ekspor tree sebagai gambar
+- **Export PNG** — Ekspor tree sebagai gambar (canvas capture)
+- **Export CSV** — Ekspor semua data eksperimen, hyperparameter, dan hasil ke file CSV untuk analisis lanjut di Excel/Spreadsheet
 
 ### 🎨 UI/UX
 
 - **Dark & Light theme** — Toggle tema sesuai preferensi
 - **Zoom & Pan** — Navigasi canvas dengan scroll zoom dan drag
-- **Smooth page transitions** — Animasi perpindahan halaman
-- **Parameter sidebar** — Drag parameter dari sidebar ke node card
-- **Input validation** — Validasi hasil eksperimen (format angka, 4 desimal)
+- **Smooth page transitions** — Animasi perpindahan halaman yang premium
+- **Parameter sidebar** — Drag parameter dari sidebar ke node card untuk mempermudah input
+- **Input validation** — Validasi otomatis hasil eksperimen (format angka, auto-format 4 desimal)
 
 ---
 
@@ -91,51 +92,52 @@ Hyper-Tree/
 ├── vite.config.js          # Konfigurasi Vite (multi-page)
 ├── package.json
 └── src/
-    ├── main.js             # Entry point utama
+    ├── main.js             # Entry point utama & event binding
     ├── tree.js             # Rendering tree, pan/zoom, drag node
-    ├── node.js             # Rendering kartu node
-    ├── store.js            # State management & persistence
-    ├── modal.js            # Modal edit node + validasi input
-    ├── sidebar.js          # Sidebar parameter drag & drop
-    ├── links.js            # Shared parameter detection
-    ├── export.js           # Export tree ke PNG
-    ├── dashboard.js        # Logic dashboard + Chart.js
-    ├── style.css           # Stylesheet utama
-    └── dashboard.css       # Stylesheet dashboard
+    ├── node.js             # Rendering kartu node (HTML factory)
+    ├── store.js            # State management, persistence (localStorage/File)
+    ├── modal.js            # Modal edit node, inheritance logic UI, validasi
+    ├── sidebar.js          # Sidebar parameter drag & drop logic
+    ├── links.js            # Deteksi shared parameter & penggambaran koneksi
+    ├── export.js           # Logic Export tree ke PNG dan CSV
+    ├── dashboard.js        # Logic dashboard, Chart.js implementation
+    ├── style.css           # Stylesheet utama & design system
+    └── dashboard.css       # Stylesheet khusus dashboard
 ```
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Teknologi                  | Kegunaan                       |
-| -------------------------- | ------------------------------ |
-| **Vanilla JS**             | Logic aplikasi tanpa framework |
-| **Vite**                   | Build tool & dev server        |
-| **Chart.js**               | Visualisasi data di dashboard  |
-| **html-to-image**          | Export tree ke PNG             |
-| **UUID**                   | Generate ID unik untuk node    |
-| **File System Access API** | Save/load file langsung        |
+| Teknologi                  | Kegunaan                             |
+| -------------------------- | ------------------------------------ |
+| **Vanilla JS**             | Logic aplikasi performa tinggi       |
+| **Vite**                   | Build tool modern & dev server       |
+| **Chart.js**               | Visualisasi data metrik di dashboard |
+| **html-to-image**          | Library untuk menangkap gambar canvas|
+| **UUID**                   | Identifikasi unik untuk setiap node  |
+| **File System Access API** | Akses file sistem native (browser)   |
 
 ---
 
 ## 📖 Cara Penggunaan
 
-1. **Buat eksperimen** — Klik `+ Add Root Node` untuk membuat node awal
-2. **Tambah parameter** — Edit node atau drag parameter dari sidebar
-3. **Buat variasi** — Tambah child node, override parameter yang ingin diubah
-4. **Catat hasil** — Isi metrik hasil di bagian Results (format: angka desimal)
-5. **Bandingkan** — Buka Dashboard untuk melihat perbandingan visual
-6. **Simpan** — Klik Save untuk menyimpan sebagai file JSON
+1. **Buat eksperimen** — Klik `+ Add Root Node` untuk memulai pohon baru
+2. **Tambah parameter** — Edit node secara manual atau drag dari sidebar parameter
+3. **Bangun hierarki** — Tambah child node; tentukan parameter mana yang ingin di-override dari parent
+4. **Bandingkan Node** — Gunakan fitur `Compare 2 Nodes` untuk melihat perbedaan hyperparameter antar 2 node terpilih
+5. **Catat hasil** — Masukkan angka hasil di modal edit untuk melihat ranking di dashboard
+6. **Analisis** — Pindah ke halaman Dashboard untuk visualisasi performa mendalam
+7. **Ekspor** — Gunakan `Export PNG` untuk gambar atau `Export CSV` untuk data tabular
 
 ---
 
 ## 🎯 Use Case
 
-- **Riset ML/DL** — Tracking eksperimen image captioning, NLP, computer vision
-- **Hyperparameter tuning** — Visualisasi ruang pencarian parameter
-- **Dokumentasi eksperimen** — Catat dan bandingkan hasil secara terstruktur
-- **Presentasi** — Export tree sebagai gambar untuk laporan
+- **Eksperimen Deep Learning** — Dokumentasikan pencarian hyperparameter (LR, Epochs, Batch Size)
+- **Benchmarking Model** — Bandingkan hasil metrik NLP/Vision antar model dengan struktur yang jelas
+- **Tingkatkan Reproduksibilitas** — Simpan konfigurasi eksperimen lengkap dalam satu file JSON
+- **Presentasi Hasil** — Buat grafik perbandingan dan pohon eksperimen untuk laporan/paper
 
 ---
 
