@@ -8,7 +8,7 @@ import {
 } from './store.js';
 import { initCanvas, renderTree, panToNode } from './tree.js';
 import { initModal, openEditModal } from './modal.js';
-import { exportTreeAsPng } from './export.js';
+import { exportTreeAsPng, exportTreeAsCsv } from './export.js';
 import { initSidebar } from './sidebar.js';
 
 const compareState = {
@@ -31,6 +31,10 @@ render();
 document.getElementById('btn-add-root').addEventListener('click', () => {
   createRootNode();
   render();
+});
+
+document.getElementById('btn-export-csv').addEventListener('click', () => {
+  exportTreeAsCsv();
 });
 
 document.getElementById('btn-export').addEventListener('click', () => {

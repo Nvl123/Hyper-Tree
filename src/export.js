@@ -1,4 +1,5 @@
 import { toPng } from 'html-to-image';
+import { getAllNodes, getEffectiveParams, isRootNode } from './store.js';
 
 /**
  * Export the entire tree canvas to PNG and trigger download.
@@ -34,4 +35,95 @@ export async function exportTreeAsPng() {
   } finally {
     canvas.style.transform = originalTransform;
   }
+}
+
+/**
+ * Export the tree nodes, hyperparameters, and results to a CSV file.
+ */
+export function exportTreeAsCsv() {
+  const nodes = getAllNodes();
+  if (!nodes || nodes.length === 0) {
+    alert('No nodes to export.');
+    return;
+  }
+
+  // Define result metrics
+  const RESULT_FIELDS = [
+    'bleu_1', 'bleu_2', 'bleu_3', 'bleu_4',
+    'meteor', 'rouge_l', 'cider', 'spice',
+    'loss', 'accuracy',
+  ];
+
+  // Gather all unique hyperparameters keys
+  const allParamKeys = new Set();
+  nodes.forEach((node) => {
+    const params = getEffectiveParams(node.id) || {};
+    Object.keys(params).forEach((k) => allParamKeys.add(k));
+  });
+  const paramKeys = Array.from(allParamKeys).sort();
+
+  // Create Header Row
+  const headers = [
+    'Node Name',
+    'Node Type',
+    'Parameters Info',
+    ...paramKeys,
+    ...RESULT_FIELDS.map((f) => f.toUpperCase().replace('_', ' ')),
+  ];
+
+  const rows = [headers];
+
+  nodes.forEach((node) => {
+    const isRoot = isRootNode(node.id);
+    const params = getEffectiveParams(node.id) || {};
+    const results = node.results || {};
+
+    // Keterangan parameter format: "param_a = val_a, param_b = val_b"
+    const paramInfoStr = Object.entries(params)
+      .map(([k, v]) => `${k} = ${v}`)
+      .join(' | ');
+
+    const row = [
+      node.name,
+      isRoot ? 'Root' : 'Child',
+      paramInfoStr
+    ];
+
+    // Add dynamic parameter columns
+    paramKeys.forEach((key) => {
+      row.push(params[key] !== undefined ? params[key] : '');
+    });
+
+    // Add result columns
+    RESULT_FIELDS.forEach((field) => {
+      const val = results[field];
+      row.push(val !== undefined && val !== null && val !== '' ? String(val).replace('.', ',') : '');
+    });
+
+    rows.push(row);
+  });
+
+  // Convert to CSV safely
+  const csvContent = rows
+    .map((r) =>
+      r.map((val) => {
+        const strVal = String(val || '');
+        // Escape quotes, commas, newlines
+        if (strVal.includes(',') || strVal.includes('"') || strVal.includes('\n') || strVal.includes('\r')) {
+          return `"${strVal.replace(/"/g, '""')}"`;
+        }
+        return strVal;
+      }).join(',')
+    )
+    .join('\n');
+
+  // Create download link
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `hypertree-export-${Date.now()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
