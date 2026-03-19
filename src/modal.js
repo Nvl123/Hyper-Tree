@@ -623,3 +623,160 @@ export function openUniquenessModal() {
   };
   window.setTimeout(() => window.addEventListener('keydown', escHandler), 0);
 }
+
+/**
+ * Open the similarity checker modal.
+ */
+export function openSimilarityModal() {
+  const allNodes = getAllNodes();
+  if (allNodes.length < 2) {
+    alert('Butuh minimal 2 node untuk mengecek kemiripan.');
+    return;
+  }
+
+  modalEl.innerHTML = '';
+  modalEl.classList.remove('hidden');
+  backdropEl.classList.remove('hidden');
+
+  const container = document.createElement('div');
+  container.className = 'modal-content';
+  container.style.maxWidth = '700px';
+
+  const title = document.createElement('h2');
+  title.className = 'modal-title';
+  title.textContent = '👯 Similarity Check';
+  container.appendChild(title);
+
+  // Similarity logic
+  const pairs = [];
+  for (let i = 0; i < allNodes.length; i++) {
+    for (let j = i + 1; j < allNodes.length; j++) {
+      const nodeA = allNodes[i];
+      const nodeB = allNodes[j];
+      const paramsA = getEffectiveParams(nodeA.id) || {};
+      const paramsB = getEffectiveParams(nodeB.id) || {};
+      
+      const keysA = Object.keys(paramsA);
+      const keysB = Object.keys(paramsB);
+      const allKeys = new Set([...keysA, ...keysB]);
+      
+      if (allKeys.size === 0) {
+        pairs.push({ nodeA, nodeB, similarity: 100, matches: 0, total: 0 });
+        continue;
+      }
+
+      let matches = 0;
+      for (const key of allKeys) {
+        if (paramsA[key] !== undefined && paramsA[key] === paramsB[key]) {
+          matches++;
+        }
+      }
+      
+      const similarity = (matches / allKeys.size) * 100;
+      pairs.push({ nodeA, nodeB, similarity, matches, total: allKeys.size });
+    }
+  }
+
+  // Sort by similarity descending
+  pairs.sort((a, b) => b.similarity - a.similarity);
+
+  // Summary
+  const summary = document.createElement('p');
+  summary.style.marginBottom = '16px';
+  summary.style.fontSize = '14px';
+  summary.style.color = 'var(--text-primary)';
+  summary.innerHTML = `Menganalisis <strong>${pairs.length}</strong> pasang node. Diurutkan dari yang paling mirip.`;
+  container.appendChild(summary);
+
+  // Table
+  const tableWrap = document.createElement('div');
+  tableWrap.className = 'modal-table-wrap';
+  tableWrap.style.maxHeight = '400px';
+  tableWrap.style.overflowY = 'auto';
+  tableWrap.style.border = '1px solid var(--border-card)';
+  tableWrap.style.borderRadius = 'var(--radius-sm)';
+
+  const table = document.createElement('table');
+  table.className = 'compare-diff-table';
+  table.style.width = '100%';
+
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th>Node 1</th><th>Node 2</th><th style="text-align:center;">Kemiripan</th><th>Detail</th></tr>';
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  pairs.forEach(pair => {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border-card)';
+
+    const tdA = document.createElement('td');
+    tdA.textContent = pair.nodeA.name;
+    tdA.style.padding = '8px';
+
+    const tdB = document.createElement('td');
+    tdB.textContent = pair.nodeB.name;
+    tdB.style.padding = '8px';
+
+    const tdSim = document.createElement('td');
+    tdSim.style.textAlign = 'center';
+    tdSim.style.padding = '8px';
+    tdSim.style.fontWeight = '600';
+    
+    let color = 'var(--text-primary)';
+    if (pair.similarity === 100) color = 'var(--override-color)';
+    else if (pair.similarity >= 80) color = 'var(--accent)';
+    else if (pair.similarity < 50) color = 'var(--text-muted)';
+    
+    tdSim.style.color = color;
+    tdSim.textContent = `${pair.similarity.toFixed(1)}%`;
+
+    const tdDet = document.createElement('td');
+    tdDet.style.padding = '8px';
+    tdDet.style.fontSize = '12px';
+    tdDet.style.color = 'var(--text-secondary)';
+    if (pair.total === 0) {
+      tdDet.textContent = 'Tidak ada parameter';
+    } else {
+      tdDet.textContent = `${pair.matches} dari ${pair.total} parameter sama`;
+    }
+
+    tr.appendChild(tdA);
+    tr.appendChild(tdB);
+    tr.appendChild(tdSim);
+    tr.appendChild(tdDet);
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  tableWrap.appendChild(table);
+  container.appendChild(tableWrap);
+
+  // Close btn
+  const btnRow = document.createElement('div');
+  btnRow.className = 'modal-actions';
+  btnRow.style.marginTop = '24px';
+  btnRow.style.justifyContent = 'flex-end';
+  btnRow.style.display = 'flex';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'modal-btn cancel-btn';
+  closeBtn.textContent = 'Tutup';
+  closeBtn.addEventListener('click', () => {
+    modalEl.classList.add('hidden');
+    backdropEl.classList.add('hidden');
+  });
+
+  btnRow.appendChild(closeBtn);
+  container.appendChild(btnRow);
+  modalEl.appendChild(container);
+
+  // Escape to close
+  const escHandler = (e) => {
+    if (e.key === 'Escape') {
+      modalEl.classList.add('hidden');
+      backdropEl.classList.add('hidden');
+      window.removeEventListener('keydown', escHandler);
+    }
+  };
+  window.setTimeout(() => window.addEventListener('keydown', escHandler), 0);
+}

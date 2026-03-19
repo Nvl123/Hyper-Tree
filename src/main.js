@@ -7,7 +7,7 @@ import {
   getNode, getEffectiveParams, getAllNodes
 } from './store.js';
 import { initCanvas, renderTree, panToNode } from './tree.js';
-import { initModal, openEditModal, openUniquenessModal } from './modal.js';
+import { initModal, openEditModal, openUniquenessModal, openSimilarityModal } from './modal.js';
 import { exportTreeAsPng, exportTreeAsCsv } from './export.js';
 import { initSidebar } from './sidebar.js';
 
@@ -23,8 +23,10 @@ initCanvas();
 initModal();
 initSidebar();
 initTheme();
+initToolsMenu();
 initCompareFeature();
 initUniquenessCheck();
+initSimilarityCheck();
 render();
 
 // ─── Toolbar ─────────────────────────────────────────────
@@ -364,6 +366,51 @@ function render() {
 }
 
 window.addEventListener('resize', () => render());
+
+// ─── Tools Menu ─────────────────────────────────────────
+
+function initToolsMenu() {
+  const btnToggle = document.getElementById('btn-tools-toggle');
+  const btnClose = document.getElementById('btn-tools-close');
+  const menu = document.getElementById('tools-menu');
+
+  if (btnToggle && btnClose && menu) {
+    btnToggle.addEventListener('click', () => {
+      // Hide toggle button
+      btnToggle.style.opacity = '0';
+      btnToggle.style.transform = 'scale(0.8)';
+      btnToggle.style.pointerEvents = 'none';
+
+      // Show menu
+      menu.style.opacity = '1';
+      menu.style.transform = 'translateY(0) scale(1)';
+      menu.style.pointerEvents = 'auto';
+    });
+
+    btnClose.addEventListener('click', () => {
+      // Hide menu
+      menu.style.opacity = '0';
+      menu.style.transform = 'translateY(20px) scale(0.9)';
+      menu.style.pointerEvents = 'none';
+
+      // Show toggle button
+      btnToggle.style.opacity = '1';
+      btnToggle.style.transform = 'scale(1)';
+      btnToggle.style.pointerEvents = 'auto';
+    });
+  }
+}
+
+// ─── Similarity Check ───────────────────────────────────
+
+function initSimilarityCheck() {
+  const btn = document.getElementById('btn-check-similarity');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    openSimilarityModal();
+  });
+}
 
 // ─── Uniqueness Check ───────────────────────────────────
 

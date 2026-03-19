@@ -70,9 +70,15 @@
 
     <!-- Floating Compare Controls -->
     <div class="floating-compare">
-      <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
-        <button id="btn-check-uniqueness" class="toolbar-btn" title="Check if nodes have unique hyperparameters">🔍 Cek Unik</button>
-        <button id="btn-compare-toggle" class="toolbar-btn" title="Compare two nodes">⚖ Compare 2 Nodes</button>
+      <div class="tools-wrapper" style="position: relative; display: flex; flex-direction: column; align-items: flex-start; height: 38px;">
+        <button id="btn-tools-toggle" class="toolbar-btn primary" title="Open Analysis Tools" style="position: absolute; bottom: 0; left: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.2); padding: 8px 16px; font-weight: 600; font-size: 14px; transition: all 0.3s ease; transform-origin: bottom left;">🛠️ Analysis Tools</button>
+        
+        <div id="tools-menu" style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start; opacity: 0; transform: translateY(20px) scale(0.9); pointer-events: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2); position: absolute; bottom: 0; left: 0; transform-origin: bottom left;">
+          <button id="btn-check-similarity" class="toolbar-btn" title="Check parameter similarity between nodes">👯 Cek Kemiripan</button>
+          <button id="btn-check-uniqueness" class="toolbar-btn" title="Check if nodes have unique hyperparameters">🔍 Cek Unik</button>
+          <button id="btn-compare-toggle" class="toolbar-btn" title="Compare two nodes">⚖ Compare 2 Nodes</button>
+          <button id="btn-tools-close" class="toolbar-btn" title="Close Menu" style="color: var(--danger); font-weight: bold;">✕ Tutup Menu</button>
+        </div>
       </div>
       <div id="compare-panel" class="compare-panel hidden">
         <div class="compare-panel-header">
