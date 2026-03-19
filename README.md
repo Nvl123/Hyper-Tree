@@ -14,10 +14,13 @@
 
 - **Buat node root & child** — Bangun hierarki eksperimen dengan parameter yang diwariskan dari parent ke child
 - **Drag & drop node** — Geser node secara bebas di canvas, koneksi garis mengikuti secara otomatis (seperti Figma/draw.io)
-- [x] **Compare 2 Nodes** — Bandingkan dua node secara langsung untuk melihat perbedaan hyperparameter dan metrik hasil
-- [x] **Expand/Collapse** — Sembunyikan atau tampilkan subtree untuk fokus pada bagian tertentu
-- [x] **Search Node** — Cari node berdasarkan nama atau nilai hyperparameter dengan mudah
-- [x] **Grid System** — Toggle grid background untuk membantu perataan node secara manual
+- **Expand/Collapse** — Sembunyikan atau tampilkan subtree untuk fokus pada bagian tertentu
+- **Search Node** — Cari node berdasarkan nama atau nilai hyperparameter dengan mudah
+- **Grid System** — Toggle grid background untuk membantu perataan node secara manual
+- **Analysis Tools** — Menu analitik interaktif yang mencakup:
+  - 👯 **Cek Kemiripan**: Hitung dan urutkan persentase kesamaan hyperparameter antar semua node.
+  - 🔍 **Cek Unik**: Validasi otomatis untuk memastikan tidak ada duplikasi konfigurasi di tree Anda.
+  - ⚖ **Compare 2 Nodes**: Bandingkan dua node spesifik untuk melihat perbedaan parameternya.
 
 ### 📊 Dashboard Analitik
 
@@ -125,9 +128,9 @@ Hyper-Tree/
 1. **Buat eksperimen** — Klik `+ Add Root Node` untuk memulai pohon baru
 2. **Tambah parameter** — Edit node secara manual atau drag dari sidebar parameter
 3. **Bangun hierarki** — Tambah child node; tentukan parameter mana yang ingin di-override dari parent
-4. **Bandingkan Node** — Gunakan fitur `Compare 2 Nodes` untuk melihat perbedaan hyperparameter antar 2 node terpilih
+4. **Analisis Langsung** — Gunakan menu `Analysis Tools` untuk mengecek keunikan konfigurasi, menghitung kemiripan persentase antar eksperimen, atau membandingkan 2 node spesifik.
 5. **Catat hasil** — Masukkan angka hasil di modal edit untuk melihat ranking di dashboard
-6. **Analisis** — Pindah ke halaman Dashboard untuk visualisasi performa mendalam
+6. **Eksplorasi** — Pindah ke halaman Dashboard untuk visualisasi performa mendalam
 7. **Ekspor** — Gunakan `Export PNG` untuk gambar atau `Export CSV` untuk data tabular
 
 ---
