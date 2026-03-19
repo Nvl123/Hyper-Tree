@@ -112,14 +112,14 @@ Hyper-Tree/
 
 ## 🛠️ Tech Stack
 
-| Teknologi                  | Kegunaan                             |
-| -------------------------- | ------------------------------------ |
-| **Vanilla JS**             | Logic aplikasi performa tinggi       |
-| **Vite**                   | Build tool modern & dev server       |
-| **Chart.js**               | Visualisasi data metrik di dashboard |
-| **html-to-image**          | Library untuk menangkap gambar canvas|
-| **UUID**                   | Identifikasi unik untuk setiap node  |
-| **File System Access API** | Akses file sistem native (browser)   |
+| Teknologi                  | Kegunaan                              |
+| -------------------------- | ------------------------------------- |
+| **Vanilla JS**             | Logic aplikasi performa tinggi        |
+| **Vite**                   | Build tool modern & dev server        |
+| **Chart.js**               | Visualisasi data metrik di dashboard  |
+| **html-to-image**          | Library untuk menangkap gambar canvas |
+| **UUID**                   | Identifikasi unik untuk setiap node   |
+| **File System Access API** | Akses file sistem native (browser)    |
 
 ---
 
