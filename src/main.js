@@ -4,10 +4,10 @@ import {
   createRootNode, createChildNode,
   updateNode, deleteNode, duplicateNode,
   exportToJSON, importFromJSON,
-  getNode, getEffectiveParams
+  getNode, getEffectiveParams, getAllNodes
 } from './store.js';
 import { initCanvas, renderTree, panToNode } from './tree.js';
-import { initModal, openEditModal } from './modal.js';
+import { initModal, openEditModal, openUniquenessModal } from './modal.js';
 import { exportTreeAsPng, exportTreeAsCsv } from './export.js';
 import { initSidebar } from './sidebar.js';
 
@@ -24,6 +24,7 @@ initModal();
 initSidebar();
 initTheme();
 initCompareFeature();
+initUniquenessCheck();
 render();
 
 // ─── Toolbar ─────────────────────────────────────────────
@@ -363,6 +364,17 @@ function render() {
 }
 
 window.addEventListener('resize', () => render());
+
+// ─── Uniqueness Check ───────────────────────────────────
+
+function initUniquenessCheck() {
+  const btn = document.getElementById('btn-check-uniqueness');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    openUniquenessModal();
+  });
+}
 
 // ─── Node Compare ───────────────────────────────────────
 

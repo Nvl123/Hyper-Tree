@@ -476,3 +476,150 @@ function getDescendantIds(node) {
   walk(node);
   return ids;
 }
+
+/**
+ * Open the uniqueness checker modal.
+ */
+export function openUniquenessModal() {
+  const allNodes = getAllNodes();
+  if (allNodes.length < 2) {
+    alert('Butuh minimal 2 node untuk mengecek keunikan.');
+    return;
+  }
+
+  modalEl.innerHTML = '';
+  modalEl.classList.remove('hidden');
+  backdropEl.classList.remove('hidden');
+
+  const container = document.createElement('div');
+  container.className = 'modal-content';
+  container.style.maxWidth = '600px';
+
+  const title = document.createElement('h2');
+  title.className = 'modal-title';
+  title.textContent = '🔍 Uniqueness Check';
+  container.appendChild(title);
+
+  // Uniqueness logic
+  const paramMap = new Map();
+  for (const node of allNodes) {
+    const params = getEffectiveParams(node.id) || {};
+    const sortedKeys = Object.keys(params).sort();
+    const stringifiedParams = JSON.stringify(sortedKeys.map(k => [k, String(params[k])]));
+
+    if (paramMap.has(stringifiedParams)) {
+      paramMap.get(stringifiedParams).push(node);
+    } else {
+      paramMap.set(stringifiedParams, [node]);
+    }
+  }
+
+  const tableData = [];
+  let duplicatesCount = 0;
+  for (const nodesGrp of paramMap.values()) {
+    if (nodesGrp.length > 1) {
+      duplicatesCount += (nodesGrp.length - 1);
+      nodesGrp.forEach(n => {
+        tableData.push({ node: n, unique: false, group: nodesGrp });
+      });
+    } else {
+      tableData.push({ node: nodesGrp[0], unique: true, group: nodesGrp });
+    }
+  }
+
+  // Summary
+  const summary = document.createElement('p');
+  summary.style.marginBottom = '16px';
+  summary.style.fontSize = '14px';
+  summary.style.color = 'var(--text-primary)';
+  if (duplicatesCount === 0) {
+    summary.innerHTML = '✅ <strong>Semua node unik!</strong> Tidak ada konfigurasi hyperparameter yang sama persis.';
+  } else {
+    summary.innerHTML = `⚠️ Ditemukan <strong>${duplicatesCount}</strong> node yang memiliki konfigurasi duplikat.`;
+  }
+  container.appendChild(summary);
+
+  // Table
+  const tableWrap = document.createElement('div');
+  tableWrap.className = 'modal-table-wrap';
+  tableWrap.style.maxHeight = '400px';
+  tableWrap.style.overflowY = 'auto';
+  tableWrap.style.border = '1px solid var(--border-card)';
+  tableWrap.style.borderRadius = 'var(--radius-sm)';
+
+  const table = document.createElement('table');
+  table.className = 'compare-diff-table';
+  table.style.width = '100%';
+
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th>Node Name</th><th style="text-align:center;">Status</th><th>Keterangan</th></tr>';
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  tableData.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border-card)';
+
+    const tdName = document.createElement('td');
+    tdName.textContent = item.node.name;
+    tdName.style.padding = '8px';
+
+    const tdStatus = document.createElement('td');
+    tdStatus.style.textAlign = 'center';
+    tdStatus.style.padding = '8px';
+    tdStatus.innerHTML = item.unique 
+      ? '<span style="color:var(--override-color); font-weight: 600;">✅ Unik</span>' 
+      : '<span style="color:var(--danger); font-weight: 600;">⚠️ Duplikat</span>';
+
+    const tdKet = document.createElement('td');
+    tdKet.style.padding = '8px';
+    if (!item.unique) {
+      const others = item.group.filter(n => n.id !== item.node.id).map(n => n.name).join(', ');
+      tdKet.textContent = `Identik dengan: ${others}`;
+      tdKet.style.fontSize = '12px';
+      tdKet.style.color = 'var(--text-muted)';
+    } else {
+      tdKet.textContent = '-';
+      tdKet.style.color = 'var(--text-muted)';
+      tdKet.style.textAlign = 'center';
+    }
+
+    tr.appendChild(tdName);
+    tr.appendChild(tdStatus);
+    tr.appendChild(tdKet);
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  tableWrap.appendChild(table);
+  container.appendChild(tableWrap);
+
+  // Close btn
+  const btnRow = document.createElement('div');
+  btnRow.className = 'modal-actions';
+  btnRow.style.marginTop = '24px';
+  btnRow.style.justifyContent = 'flex-end';
+  btnRow.style.display = 'flex';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'modal-btn cancel-btn';
+  closeBtn.textContent = 'Tutup';
+  closeBtn.addEventListener('click', () => {
+    modalEl.classList.add('hidden');
+    backdropEl.classList.add('hidden');
+  });
+
+  btnRow.appendChild(closeBtn);
+  container.appendChild(btnRow);
+  modalEl.appendChild(container);
+
+  // Escape to close
+  const escHandler = (e) => {
+    if (e.key === 'Escape') {
+      modalEl.classList.add('hidden');
+      backdropEl.classList.add('hidden');
+      window.removeEventListener('keydown', escHandler);
+    }
+  };
+  window.setTimeout(() => window.addEventListener('keydown', escHandler), 0);
+}

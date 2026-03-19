@@ -70,7 +70,10 @@
 
     <!-- Floating Compare Controls -->
     <div class="floating-compare">
-      <button id="btn-compare-toggle" class="toolbar-btn" title="Compare two nodes">⚖ Compare 2 Nodes</button>
+      <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start;">
+        <button id="btn-check-uniqueness" class="toolbar-btn" title="Check if nodes have unique hyperparameters">🔍 Cek Unik</button>
+        <button id="btn-compare-toggle" class="toolbar-btn" title="Compare two nodes">⚖ Compare 2 Nodes</button>
+      </div>
       <div id="compare-panel" class="compare-panel hidden">
         <div class="compare-panel-header">
           <span class="compare-panel-title">Hyperparameter Diff</span>
