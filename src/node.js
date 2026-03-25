@@ -1,4 +1,4 @@
-import { getEffectiveParams, getOverriddenKeys, isRootNode, getNodeDepth, getNode, updateNode, save } from './store.js';
+import { getEffectiveParams, getOverriddenKeys, isRootNode, getNodeDepth, getNode, updateNode, save, getGroups } from './store.js';
 
 // Depth color palette — each depth level gets a distinct accent
 const DEPTH_COLORS = [
@@ -64,6 +64,22 @@ export function renderNodeCard(node, onAction) {
   header.appendChild(collapseBtn);
   header.appendChild(nameEl);
   header.appendChild(depthBadge);
+
+  // Group badge
+  if (node.groupId) {
+    const groups = getGroups();
+    const grp = groups.find(g => g.id === node.groupId);
+    if (grp) {
+      const grpBadge = document.createElement('span');
+      grpBadge.className = 'group-badge';
+      grpBadge.style.background = grp.color + '33';
+      grpBadge.style.color = grp.color;
+      grpBadge.style.border = `1px solid ${grp.color}66`;
+      grpBadge.textContent = grp.name;
+      grpBadge.title = `Group: ${grp.name}`;
+      header.appendChild(grpBadge);
+    }
+  }
 
   // Secondary parents indicator
   if (node.secondaryParentIds && node.secondaryParentIds.length > 0) {
@@ -161,11 +177,13 @@ export function renderNodeCard(node, onAction) {
   const btnAdd = createBtn('➕', 'Add Child', () => onAction('addChild', node.id));
   const btnEdit = createBtn('✏️', 'Edit', () => onAction('edit', node.id));
   const btnDup = createBtn('📋', 'Duplicate', () => onAction('duplicate', node.id));
+  const btnGrp = createBtn('🏷️', 'Set Group', () => onAction('setGroup', node.id));
   const btnDel = createBtn('🗑️', 'Delete', () => onAction('delete', node.id));
 
   actions.appendChild(btnAdd);
   actions.appendChild(btnEdit);
   actions.appendChild(btnDup);
+  actions.appendChild(btnGrp);
   actions.appendChild(btnDel);
   card.appendChild(actions);
 

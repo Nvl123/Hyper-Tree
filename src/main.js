@@ -4,7 +4,8 @@ import {
   createRootNode, createChildNode,
   updateNode, deleteNode, duplicateNode,
   exportToJSON, importFromJSON,
-  getNode, getEffectiveParams, getAllNodes
+  getNode, getEffectiveParams, getAllNodes,
+  getGroups, createGroup, deleteGroup, setNodeGroup
 } from './store.js';
 import { initCanvas, renderTree, panToNode } from './tree.js';
 import { initModal, openEditModal, openUniquenessModal, openSimilarityModal } from './modal.js';
@@ -44,6 +45,10 @@ document.getElementById('btn-export').addEventListener('click', () => {
   exportTreeAsPng();
 });
 
+document.getElementById('btn-manage-groups-fab').addEventListener('click', () => {
+  openGroupPickerModal(null, render);
+});
+
 // File Save / Load
 document.getElementById('btn-save-file').addEventListener('click', async () => {
   await exportToJSON();
@@ -65,7 +70,7 @@ function updateSearchUI() {
   const btnNext = document.getElementById('btn-search-next');
   const btnClear = document.getElementById('btn-search-clear');
   const input = document.getElementById('input-search-node');
-  
+
   if (searchMatches.length > 0) {
     counter.textContent = `${searchIndex + 1}/${searchMatches.length}`;
     counter.classList.remove('hidden');
@@ -108,7 +113,6 @@ function handleSearchNode() {
     return;
   }
 
-  // If query is the same, just go to next
   if (query === lastQuery && searchMatches.length > 0) {
     handleSearchNext();
     return;
@@ -116,39 +120,35 @@ function handleSearchNode() {
 
   const roots = getRoots();
   const allNodes = [];
-  
+
   function flattenNodes(nodes) {
     for (const node of nodes) {
       allNodes.push(node);
-      if (node.children?.length) {
-        flattenNodes(node.children);
-      }
+      if (node.children?.length) flattenNodes(node.children);
     }
   }
   flattenNodes(roots);
 
-  // Match on node name or parameters
   searchMatches = allNodes.filter(n => {
     if (n.name.toLowerCase().includes(query)) return true;
     const params = getEffectiveParams(n.id) || {};
-    return Object.entries(params).some(([k, v]) => 
+    return Object.entries(params).some(([k, v]) =>
       k.toLowerCase().includes(query) || String(v).toLowerCase().includes(query)
     );
   });
-  
+
   lastQuery = query;
 
   if (searchMatches.length > 0) {
-     searchIndex = 0;
-     panToNode(searchMatches[searchIndex].id);
-     updateSearchUI();
+    searchIndex = 0;
+    panToNode(searchMatches[searchIndex].id);
+    updateSearchUI();
   } else {
-     searchIndex = -1;
-     updateSearchUI();
-     // Pulse red if not found
-     const input = document.getElementById('input-search-node');
-     input.style.borderColor = 'var(--danger)';
-     setTimeout(() => { input.style.borderColor = ''; }, 1000);
+    searchIndex = -1;
+    updateSearchUI();
+    const input = document.getElementById('input-search-node');
+    input.style.borderColor = 'var(--danger)';
+    setTimeout(() => { input.style.borderColor = ''; }, 1000);
   }
 }
 
@@ -177,8 +177,7 @@ document.getElementById('input-search-node').addEventListener('keydown', (e) => 
   if (e.key === 'Enter') {
     handleSearchNode();
   } else {
-     // Clear error border on type
-     e.target.style.borderColor = '';
+    e.target.style.borderColor = '';
   }
 });
 
@@ -195,11 +194,9 @@ document.getElementById('btn-theme').addEventListener('click', () => {
 const sidebarBtn = document.getElementById('btn-show-sidebar');
 if (sidebarBtn) {
   const sidebar = document.getElementById('param-sidebar');
-  // Check initial state
   if (!sidebar.classList.contains('collapsed')) {
     sidebarBtn.classList.add('active');
   }
-  
   sidebarBtn.addEventListener('click', () => {
     sidebar.classList.toggle('collapsed');
     sidebarBtn.classList.toggle('active', !sidebar.classList.contains('collapsed'));
@@ -210,13 +207,11 @@ if (sidebarBtn) {
 const gridBtn = document.getElementById('btn-toggle-grid');
 if (gridBtn) {
   const canvasWrapper = document.getElementById('canvas-wrapper');
-  // Load initial grid state
   const isGridOn = localStorage.getItem('hypertree_grid') === 'true';
   if (isGridOn) {
     canvasWrapper.classList.add('show-grid');
     gridBtn.classList.add('active');
   }
-
   gridBtn.addEventListener('click', () => {
     canvasWrapper.classList.toggle('show-grid');
     const isActive = canvasWrapper.classList.contains('show-grid');
@@ -276,16 +271,11 @@ async function handleAction(action, nodeId, extra) {
           results: result.results || {},
           secondaryParentIds: result.secondaryParentIds || [],
         });
-        // Handle parent change
         if (result.newParentId) {
           if (result.newParentId === '__root__') {
-            // Move to root level
             const roots = getRoots();
             const nodeData = removeNode(nodeId, roots);
-            if (nodeData) {
-              roots.push(nodeData);
-              save();
-            }
+            if (nodeData) { roots.push(nodeData); save(); }
           } else {
             moveNodeTo(nodeId, result.newParentId);
           }
@@ -309,15 +299,9 @@ async function handleAction(action, nodeId, extra) {
         const isAbs = originalSubtree.style.position === 'absolute';
         const leftOffset = parseFloat(originalSubtree.style.left) || 0;
         const topOffset = parseFloat(originalSubtree.style.top) || 0;
-        
-        if (isAbs) {
-          absoluteOpts = { x: leftOffset + 40, y: topOffset + 40 };
-        } else {
-          absoluteOpts = {
-            x: originalSubtree.offsetLeft + leftOffset + 40,
-            y: originalSubtree.offsetTop + topOffset + 40
-          };
-        }
+        absoluteOpts = isAbs
+          ? { x: leftOffset + 40, y: topOffset + 40 }
+          : { x: originalSubtree.offsetLeft + leftOffset + 40, y: originalSubtree.offsetTop + topOffset + 40 };
       }
       duplicateNode(nodeId, absoluteOpts);
       render();
@@ -326,31 +310,146 @@ async function handleAction(action, nodeId, extra) {
 
     case 'toggle': {
       const node = getNode(nodeId);
-      if (node) {
-        node.collapsed = !node.collapsed;
-        save();
-        render();
-      }
+      if (node) { node.collapsed = !node.collapsed; save(); render(); }
       break;
     }
+
+    case 'setGroup':
+      openGroupPickerModal(nodeId, render);
+      break;
 
     case 'refresh':
       render();
       break;
 
     case 'move': {
-      // Move node (nodeId) to become child of (extra = targetId)
       const targetId = extra;
       if (!targetId || nodeId === targetId) break;
-
-      // Prevent moving a node into its own descendant
       if (isDescendant(nodeId, targetId)) break;
-
       moveNodeTo(nodeId, targetId);
       render();
       break;
     }
   }
+}
+
+// ─── Group Picker Modal ──────────────────────────────────
+
+function openGroupPickerModal(nodeId, onDone) {
+  const node = nodeId ? getNode(nodeId) : null;
+  if (nodeId && !node) return;
+
+  // Remove any existing picker
+  document.querySelector('.group-picker-overlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'group-picker-overlay';
+
+  const modal = document.createElement('div');
+  modal.className = 'group-picker-modal';
+  
+  const titleHtml = node 
+    ? `<span>🏷️ Assign Group — <em>${node.name}</em></span>` 
+    : `<span>🏷️ Manage Groups</span>`;
+
+  modal.innerHTML = `
+    <div class="group-picker-header">
+      ${titleHtml}
+      <button class="group-picker-close" title="Close">✕</button>
+    </div>
+    <div class="gpm-list" id="gpm-list"></div>
+    <div class="gpm-create">
+      <input type="text" id="gpm-new-name" placeholder="New group name…" maxlength="40" />
+      <input type="color" id="gpm-new-color" value="#63b3ed" title="Group color" />
+      <button id="gpm-create-btn">＋ Create</button>
+    </div>
+  `;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const close = () => { overlay.remove(); onDone && onDone(); };
+  modal.querySelector('.group-picker-close').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  function renderList() {
+    const list = modal.querySelector('#gpm-list');
+    list.innerHTML = '';
+    const groups = getGroups();
+
+    if (node) {
+      // "No group" option
+      const noGrp = document.createElement('div');
+      noGrp.className = 'gpm-item' + (!node.groupId ? ' gpm-active' : '');
+      noGrp.innerHTML = `<span class="gpm-dot" style="background:#555"></span><span>— No Group —</span>`;
+      noGrp.addEventListener('click', () => { setNodeGroup(nodeId, null); close(); });
+      list.appendChild(noGrp);
+    }
+
+    if (groups.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'gpm-empty';
+      empty.textContent = 'No groups yet. Create one below.';
+      list.appendChild(empty);
+      return;
+    }
+
+    groups.forEach(grp => {
+      const item = document.createElement('div');
+      const isActive = node && node.groupId === grp.id;
+      item.className = 'gpm-item' + (isActive ? ' gpm-active' : '');
+      item.innerHTML = `
+        <span class="gpm-dot" style="background:${grp.color}"></span>
+        <span class="gpm-name">${grp.name}</span>
+        <button class="gpm-del" title="Delete group">🗑</button>
+      `;
+      if (node) {
+        item.addEventListener('click', (e) => {
+          if (e.target.closest('.gpm-del')) return;
+          setNodeGroup(nodeId, grp.id);
+          close();
+        });
+      } else {
+        item.style.cursor = 'default';
+      }
+      item.querySelector('.gpm-del').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (confirm(`Delete group "${grp.name}"? Nodes in this group will be ungrouped.`)) {
+          deleteGroup(grp.id);
+          renderList();
+          onDone && onDone();
+        }
+      });
+      list.appendChild(item);
+    });
+  }
+
+  renderList();
+
+  modal.querySelector('#gpm-create-btn').addEventListener('click', () => {
+    const nameInput = modal.querySelector('#gpm-new-name');
+    const colorInput = modal.querySelector('#gpm-new-color');
+    const name = nameInput.value.trim();
+    if (!name) { nameInput.focus(); nameInput.style.borderColor = 'var(--danger)'; return; }
+    nameInput.style.borderColor = '';
+    const grp = createGroup(name, colorInput.value);
+    
+    if (node) {
+      setNodeGroup(nodeId, grp.id);
+      close();
+    } else {
+      nameInput.value = '';
+      renderList();
+      onDone && onDone();
+    }
+  });
+
+  modal.querySelector('#gpm-new-name').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') modal.querySelector('#gpm-create-btn').click();
+    else e.target.style.borderColor = '';
+  });
+
+  // Auto-focus name input
+  setTimeout(() => modal.querySelector('#gpm-new-name').focus(), 60);
 }
 
 function isDescendant(ancestorId, nodeId) {
@@ -367,19 +466,15 @@ function moveNodeTo(nodeId, newParentId) {
   const roots = getRoots();
   const nodeData = removeNode(nodeId, roots);
   if (!nodeData) return;
-
   const parent = getNode(newParentId);
   if (!parent) return;
-
   parent.children.push(nodeData);
   save();
 }
 
 function removeNode(id, nodes) {
   for (let i = 0; i < nodes.length; i++) {
-    if (nodes[i].id === id) {
-      return nodes.splice(i, 1)[0];
-    }
+    if (nodes[i].id === id) return nodes.splice(i, 1)[0];
     const found = removeNode(id, nodes[i].children);
     if (found) return found;
   }
@@ -405,24 +500,18 @@ function initToolsMenu() {
 
   if (btnToggle && btnClose && menu) {
     btnToggle.addEventListener('click', () => {
-      // Hide toggle button
       btnToggle.style.opacity = '0';
       btnToggle.style.transform = 'scale(0.8)';
       btnToggle.style.pointerEvents = 'none';
-
-      // Show menu
       menu.style.opacity = '1';
       menu.style.transform = 'translateY(0) scale(1)';
       menu.style.pointerEvents = 'auto';
     });
 
     btnClose.addEventListener('click', () => {
-      // Hide menu
       menu.style.opacity = '0';
       menu.style.transform = 'translateY(20px) scale(0.9)';
       menu.style.pointerEvents = 'none';
-
-      // Show toggle button
       btnToggle.style.opacity = '1';
       btnToggle.style.transform = 'scale(1)';
       btnToggle.style.pointerEvents = 'auto';
@@ -435,10 +524,7 @@ function initToolsMenu() {
 function initSimilarityCheck() {
   const btn = document.getElementById('btn-check-similarity');
   if (!btn) return;
-
-  btn.addEventListener('click', () => {
-    openSimilarityModal();
-  });
+  btn.addEventListener('click', () => { openSimilarityModal(); });
 }
 
 // ─── Uniqueness Check ───────────────────────────────────
@@ -446,10 +532,7 @@ function initSimilarityCheck() {
 function initUniquenessCheck() {
   const btn = document.getElementById('btn-check-uniqueness');
   if (!btn) return;
-
-  btn.addEventListener('click', () => {
-    openUniquenessModal();
-  });
+  btn.addEventListener('click', () => { openUniquenessModal(); });
 }
 
 // ─── Node Compare ───────────────────────────────────────
@@ -463,9 +546,7 @@ function initCompareFeature() {
 
   toggleBtn.addEventListener('click', () => {
     compareState.active = !compareState.active;
-    if (!compareState.active) {
-      compareState.selectedIds = [];
-    }
+    if (!compareState.active) compareState.selectedIds = [];
     updateCompareUI();
   });
 
@@ -477,13 +558,10 @@ function initCompareFeature() {
   treeContainer.addEventListener('click', (e) => {
     if (!compareState.active) return;
     if (e.target.closest('button, input, textarea, select, a')) return;
-
     const card = e.target.closest('.node-card');
     if (!card) return;
-
     const nodeId = card.dataset.id;
     if (!nodeId) return;
-
     toggleCompareNode(nodeId);
     updateCompareUI();
   });
@@ -491,14 +569,8 @@ function initCompareFeature() {
 
 function toggleCompareNode(nodeId) {
   const idx = compareState.selectedIds.indexOf(nodeId);
-  if (idx >= 0) {
-    compareState.selectedIds.splice(idx, 1);
-    return;
-  }
-
-  if (compareState.selectedIds.length >= 2) {
-    compareState.selectedIds.shift();
-  }
+  if (idx >= 0) { compareState.selectedIds.splice(idx, 1); return; }
+  if (compareState.selectedIds.length >= 2) compareState.selectedIds.shift();
   compareState.selectedIds.push(nodeId);
 }
 
@@ -529,16 +601,10 @@ function updateCompareUI() {
   });
 
   if (!compareState.active) return;
-  if (!nodeA || !nodeB) {
-    resultsEl.textContent = 'Pilih 2 node untuk melihat perbedaan.';
-    return;
-  }
+  if (!nodeA || !nodeB) { resultsEl.textContent = 'Pilih 2 node untuk melihat perbedaan.'; return; }
 
   const diffs = getParamDiff(compareState.selectedIds[0], compareState.selectedIds[1]);
-  if (diffs.length === 0) {
-    resultsEl.textContent = 'Tidak ada perbedaan hyperparameter.';
-    return;
-  }
+  if (diffs.length === 0) { resultsEl.textContent = 'Tidak ada perbedaan hyperparameter.'; return; }
 
   const nodeAName = escapeHtml(nodeA.name || 'Node 1');
   const nodeBName = escapeHtml(nodeB.name || 'Node 2');
@@ -591,4 +657,3 @@ function escapeHtml(value) {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 }
-

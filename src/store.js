@@ -11,8 +11,8 @@ const DEFAULT_PARAMS = {
   dropout: '0.3',
 };
 
-/** @type {{ roots: object[] }} */
-let treeData = { roots: [] };
+/** @type {{ roots: object[], groups: object[] }} */
+let treeData = { roots: [], groups: [] };
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -234,10 +234,12 @@ export function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       treeData = JSON.parse(raw);
+      // Backward compat: old data may not have groups
+      if (!Array.isArray(treeData.groups)) treeData.groups = [];
     }
   } catch (e) {
     console.warn('Failed to load from localStorage', e);
-    treeData = { roots: [] };
+    treeData = { roots: [], groups: [] };
   }
 }
 
@@ -296,6 +298,48 @@ export async function exportToJSON() {
   URL.revokeObjectURL(url);
 }
 
+// ─── Groups API ──────────────────────────────────────────
+
+export function getGroups() {
+  return treeData.groups || [];
+}
+
+export function createGroup(name, color) {
+  const group = { id: uuidv4(), name, color: color || '#63b3ed' };
+  if (!Array.isArray(treeData.groups)) treeData.groups = [];
+  treeData.groups.push(group);
+  save();
+  return group;
+}
+
+export function updateGroup(id, changes) {
+  const group = (treeData.groups || []).find(g => g.id === id);
+  if (!group) return;
+  Object.assign(group, changes);
+  save();
+}
+
+export function deleteGroup(id) {
+  if (!Array.isArray(treeData.groups)) return;
+  treeData.groups = treeData.groups.filter(g => g.id !== id);
+  // Remove groupId from all nodes that belonged to this group
+  function clearGroup(nodes) {
+    for (const n of nodes) {
+      if (n.groupId === id) n.groupId = null;
+      if (n.children) clearGroup(n.children);
+    }
+  }
+  clearGroup(treeData.roots);
+  save();
+}
+
+export function setNodeGroup(nodeId, groupId) {
+  const result = findNodeAndParent(nodeId);
+  if (!result) return;
+  result.node.groupId = groupId || null;
+  save();
+}
+
 export async function importFromJSON() {
   // Try File System Access API
   if (window.showOpenFilePicker) {
@@ -312,6 +356,7 @@ export async function importFromJSON() {
       const data = JSON.parse(text);
       if (data && Array.isArray(data.roots)) {
         treeData = data;
+        if (!Array.isArray(treeData.groups)) treeData.groups = [];
         fileHandle = handle; // remember handle for subsequent saves
         save();
         return true;
@@ -340,6 +385,7 @@ export async function importFromJSON() {
           const data = JSON.parse(ev.target.result);
           if (data && Array.isArray(data.roots)) {
             treeData = data;
+            if (!Array.isArray(treeData.groups)) treeData.groups = [];
             fileHandle = null; // no handle in fallback mode
             save();
             resolve(true);

@@ -63,6 +63,9 @@
         <button id="nav-significance" class="sidebar-nav-btn">
           <span class="icon">🧪</span> Empirical Margin Analysis
         </button>
+        <button id="nav-group-compare" class="sidebar-nav-btn">
+          <span class="icon">🏷️</span> Perbandingan Grup
+        </button>
       </div>
     </nav>
 
@@ -143,6 +146,22 @@
         <p class="baseline-desc">Mengkomparasikan performa 3 hyperparameter terbaik Anda secara statik melawan spesifikasi rujukan paper akademik.</p>
       </div>
 
+      <!-- Settings Panel -->
+      <div id="baseline-settings-panel" class="view-settings-panel">
+        <div class="vsp-label">📋 Tampilkan:</div>
+        <div class="vsp-options">
+          <label class="vsp-radio">
+            <input type="radio" name="baseline-mode" value="top3" checked /> Top 3 Global
+          </label>
+          <label class="vsp-radio">
+            <input type="radio" name="baseline-mode" value="group" /> Per Grup
+          </label>
+        </div>
+        <select id="baseline-group-select" class="vsp-select hidden">
+          <option value="">— Pilih Grup —</option>
+        </select>
+      </div>
+
       <div class="chart-section baseline-table-container">
         <h3>Tabel Komparasi Signifikansi</h3>
         <table id="baseline-table" class="results-table">
@@ -179,6 +198,22 @@
       <div class="baseline-header">
         <h2 id="title-significance"><span class="icon">🧪</span> Empirical Margin Analysis</h2>
         <p class="baseline-desc">Menganalisis margin empiris (Heuristic Significance Proxy) dari selisih performa model Anda melawan Jurnal Referensi.</p>
+      </div>
+
+      <!-- Settings Panel -->
+      <div id="sig-settings-panel" class="view-settings-panel">
+        <div class="vsp-label">📋 Tampilkan:</div>
+        <div class="vsp-options">
+          <label class="vsp-radio">
+            <input type="radio" name="sig-mode" value="top3" checked /> Top 3 Global
+          </label>
+          <label class="vsp-radio">
+            <input type="radio" name="sig-mode" value="group" /> Per Grup
+          </label>
+        </div>
+        <select id="sig-group-select" class="vsp-select hidden">
+          <option value="">— Pilih Grup —</option>
+        </select>
       </div>
 
       <!-- Top 3 Conclusion Cards -->
@@ -227,6 +262,45 @@
 
   </main>
   </div> <!-- /.dashboard-layout -->
+
+  <!-- Group Comparison View -->
+  <div id="group-compare-main" class="baseline-main hidden">
+    <div class="baseline-header">
+      <h2><span class="icon">🏷️</span> Perbandingan Grup</h2>
+      <p class="baseline-desc">Bandingkan rata-rata performa metrik antar 2–4 grup. Pilih grup di bawah ini.</p>
+    </div>
+
+    <div id="gc-picker" class="gc-picker"></div>
+
+    <div id="gc-content" class="hidden">
+      <div class="charts-row">
+        <div class="chart-section dashboard-section">
+          <h3 class="section-title">🕸️ Profil Rata-Rata Grup (Radar)</h3>
+          <div class="chart-container">
+            <canvas id="gc-radar-chart"></canvas>
+          </div>
+        </div>
+        <div class="chart-section dashboard-section">
+          <h3 class="section-title">📊 Perbandingan Metrik (Bar)</h3>
+          <div class="chart-container">
+            <canvas id="gc-bar-chart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="chart-section baseline-table-container" style="margin-top:24px;">
+        <h3>📋 Ringkasan: Terbaik per Grup</h3>
+        <table id="gc-table" class="results-table">
+          <thead><tr id="gc-thead-tr"></tr></thead>
+          <tbody id="gc-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="gc-empty" class="dashboard-empty" style="padding:48px;">
+      <div class="empty-icon">🏷️</div>
+      <p>Pilih minimal 2 grup di atas untuk melihat perbandingan.</p>
+    </div>
+  </div> <!-- /#group-compare-main -->
 
   <script src="src/dashboard.js" type="module"></script>
 </body>

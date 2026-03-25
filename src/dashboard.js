@@ -51,13 +51,18 @@ const STORAGE_KEY = 'hypertree_data';
 
 let lineChart = null, radarChart = null, barChart = null;
 let allExperiments = [];
+let allGroups = [];
 let selectedIds = new Set();
 let selectedMetrics = new Set(METRICS);
 let selectedLAMetrics = new Set(LOSS_ACC_METRICS);
 let sortMetric = '';
 let sortDir = 'desc';
 let viewMode = 'eval'; // 'eval', 'lossacc', 'correlation', or 'similarity'
-let activePage = 'explore'; // 'explore', 'baseline', or 'significance'
+let activePage = 'explore'; // 'explore', 'baseline', 'significance', 'group-compare'
+
+// Group comparison charts
+let gcRadarChart = null;
+let gcBarChart = null;
 
 // ─── Init ────────────────────────────────────────────────
 
@@ -74,10 +79,12 @@ function setupSidebar() {
   const btnExplore = document.getElementById('nav-explore');
   const btnBaseline = document.getElementById('nav-baseline');
   const btnSignificance = document.getElementById('nav-significance');
+  const btnGroupCompare = document.getElementById('nav-group-compare');
   const mainContent = document.getElementById('dashboard-main');
   const emptyContent = document.getElementById('dashboard-empty');
   const baselineContent = document.getElementById('baseline-main');
   const significanceContent = document.getElementById('significance-main');
+  const groupCompareContent = document.getElementById('group-compare-main');
   const toolbarCenter = document.querySelector('.toolbar-center');
 
   // Toggle Sidebar
@@ -89,61 +96,59 @@ function setupSidebar() {
     }
   });
 
+  const allContents = [mainContent, emptyContent, baselineContent, significanceContent, groupCompareContent];
+  const hideAll = () => allContents.forEach(el => el && el.classList.add('hidden'));
+
   // Navigation Logic
   const switchPage = (page) => {
     activePage = page;
-    
-    // Update active states
-    // Update active states
+
     btnExplore.classList.toggle('active', page === 'explore');
     btnBaseline.classList.toggle('active', page === 'baseline');
     btnSignificance.classList.toggle('active', page === 'significance');
+    btnGroupCompare.classList.toggle('active', page === 'group-compare');
+
+    hideAll();
 
     if (page === 'explore') {
-      baselineContent.classList.add('hidden');
-      significanceContent.classList.add('hidden');
-      toolbarCenter.classList.remove('hidden'); // Show standard filters
+      toolbarCenter.classList.remove('hidden');
       if (allExperiments.length === 0) {
         emptyContent.classList.remove('hidden');
-        mainContent.classList.add('hidden');
       } else {
-        emptyContent.classList.add('hidden');
         mainContent.classList.remove('hidden');
         refreshDashboard();
       }
     } else if (page === 'baseline') {
-      mainContent.classList.add('hidden');
-      emptyContent.classList.add('hidden');
-      significanceContent.classList.add('hidden');
-      toolbarCenter.classList.add('hidden'); // Hide correlation/loss filters
+      toolbarCenter.classList.add('hidden');
       if (allExperiments.length > 0) {
         baselineContent.classList.remove('hidden');
+        renderBaselineSettings();
         renderBaselineComparison(allExperiments);
       } else {
-        baselineContent.classList.add('hidden');
         emptyContent.classList.remove('hidden');
       }
     } else if (page === 'significance') {
-      mainContent.classList.add('hidden');
-      emptyContent.classList.add('hidden');
-      baselineContent.classList.add('hidden');
       toolbarCenter.classList.add('hidden');
       if (allExperiments.length > 0) {
         significanceContent.classList.remove('hidden');
+        renderSigSettings();
         renderSignificanceView(allExperiments);
       } else {
-        significanceContent.classList.add('hidden');
         emptyContent.classList.remove('hidden');
       }
+    } else if (page === 'group-compare') {
+      toolbarCenter.classList.add('hidden');
+      groupCompareContent.classList.remove('hidden');
+      renderGroupCompare();
     }
-    
-    // Close sidebar on mobile after click
+
     if (window.innerWidth <= 768) sidebar.classList.remove('mobile-open');
   };
 
   btnExplore.addEventListener('click', () => switchPage('explore'));
   btnBaseline.addEventListener('click', () => switchPage('baseline'));
   btnSignificance.addEventListener('click', () => switchPage('significance'));
+  btnGroupCompare.addEventListener('click', () => switchPage('group-compare'));
 }
 
 // ─── Theme ───────────────────────────────────────────────
@@ -304,6 +309,7 @@ function flattenNodes(nodes, list = []) {
 function initExperiments(data) {
   const allNodes = flattenNodes(data.roots || []);
   allExperiments = allNodes.filter(n => n.results && Object.keys(n.results).length > 0);
+  allGroups = Array.isArray(data.groups) ? data.groups : [];
   selectedIds = new Set(allExperiments.map(e => e.id));
   selectedMetrics = new Set(METRICS);
   selectedLAMetrics = new Set(LOSS_ACC_METRICS);
@@ -1687,14 +1693,16 @@ const JOURNAL_BASELINE = {
 };
 
 function renderBaselineComparison(experiments) {
-  // 1. Calculate top 3 experiments based on average score of METRICS
+  // Apply mode filter (top3 or by-group)
+  const filtered = getBaselineExperiments(experiments);
   const getMetricMax = (metric) => {
     if (metric === 'cider') return 10.0;
     if (metric === 'spice') return 1.0;
     return 1.0; 
   };
 
-  const scoredExps = experiments.map(exp => {
+  // 1. Calculate top 3 experiments based on average score of METRICS
+  const scoredExps = filtered.map(exp => {
     let sum = 0;
     let count = 0;
     METRICS.forEach(m => {
@@ -1962,6 +1970,9 @@ function renderBaselineLineChart(top3, metrics) {
 // ─── Empirical Margin Analysis View ─────────────────────
 
 function renderSignificanceView(experiments) {
+  // Apply mode filter (top3 or by-group)
+  const filtered = getSigExperiments(experiments);
+
   const cardsContainer = document.getElementById('sig-cards-container');
   const theadTr = document.getElementById('sig-thead-tr');
   const tbody = document.getElementById('sig-tbody');
@@ -1977,7 +1988,7 @@ function renderSignificanceView(experiments) {
     return 1.0; 
   };
 
-  const scoredExps = experiments.map(exp => {
+  const scoredExps = filtered.map(exp => {
     let sum = 0;
     let count = 0;
     METRICS.forEach(m => {
@@ -2091,6 +2102,304 @@ function renderSignificanceView(experiments) {
         td.style.color = 'var(--text-muted)';
       }
       
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+// ─── Baseline – Settings Panel ──────────────────────────
+
+function renderBaselineSettings() {
+  const select = document.getElementById('baseline-group-select');
+  if (!select) return;
+
+  // Populate group dropdown
+  select.innerHTML = '<option value="">— Pilih Grup —</option>';
+  allGroups.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g.id;
+    opt.textContent = g.name;
+    select.appendChild(opt);
+  });
+
+  // Wire radio buttons
+  document.querySelectorAll('input[name="baseline-mode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const isGroup = radio.value === 'group';
+      select.classList.toggle('hidden', !isGroup);
+      if (!isGroup) renderBaselineComparison(allExperiments);
+    });
+  });
+
+  select.addEventListener('change', () => {
+    renderBaselineComparison(allExperiments);
+  });
+}
+
+// ─── Sig – Settings Panel ────────────────────────────────
+
+function renderSigSettings() {
+  const select = document.getElementById('sig-group-select');
+  if (!select) return;
+
+  select.innerHTML = '<option value="">— Pilih Grup —</option>';
+  allGroups.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g.id;
+    opt.textContent = g.name;
+    select.appendChild(opt);
+  });
+
+  document.querySelectorAll('input[name="sig-mode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const isGroup = radio.value === 'group';
+      select.classList.toggle('hidden', !isGroup);
+      if (!isGroup) renderSignificanceView(allExperiments);
+    });
+  });
+
+  select.addEventListener('change', () => {
+    renderSignificanceView(allExperiments);
+  });
+}
+
+// ─── Helper: get experiments for baseline/sig view ───────
+
+function getBaselineExperiments(allExps) {
+  const modeEl = document.querySelector('input[name="baseline-mode"]:checked');
+  const mode = modeEl ? modeEl.value : 'top3';
+  if (mode === 'group') {
+    const gid = document.getElementById('baseline-group-select')?.value;
+    if (gid) return allExps.filter(e => e.groupId === gid);
+  }
+  return allExps;
+}
+
+function getSigExperiments(allExps) {
+  const modeEl = document.querySelector('input[name="sig-mode"]:checked');
+  const mode = modeEl ? modeEl.value : 'top3';
+  if (mode === 'group') {
+    const gid = document.getElementById('sig-group-select')?.value;
+    if (gid) return allExps.filter(e => e.groupId === gid);
+  }
+  return allExps;
+}
+
+// ─── Group Comparison Page ───────────────────────────────
+
+function renderGroupCompare() {
+  const picker = document.getElementById('gc-picker');
+  const content = document.getElementById('gc-content');
+  const empty = document.getElementById('gc-empty');
+  if (!picker) return;
+
+  // Fresh groups from localStorage each time
+  let liveGroups = allGroups;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.groups)) {
+        liveGroups = parsed.groups;
+        // Also refresh allGroups
+        allGroups = liveGroups;
+      }
+    }
+  } catch {}
+
+  let selectedGroupIds = new Set();
+
+  function rebuildCharts() {
+    const chosen = liveGroups.filter(g => selectedGroupIds.has(g.id));
+    if (chosen.length < 2) {
+      content.classList.add('hidden');
+      empty.classList.remove('hidden');
+      return;
+    }
+    content.classList.remove('hidden');
+    empty.classList.add('hidden');
+
+    // Build per-group experiment lists
+    const groupData = chosen.map(g => {
+      const exps = allExperiments.filter(e => e.groupId === g.id && e.results && Object.keys(e.results).length > 0);
+      return { group: g, exps };
+    });
+
+    // Active eval metrics (all of METRICS)
+    const activeMetrics = METRICS;
+
+    // Compute avg per metric per group
+    const getMetricMax = (m) => m === 'cider' ? 10 : 1;
+    const groupAvgs = groupData.map(({ group, exps }) => {
+      const avgs = {};
+      activeMetrics.forEach(m => {
+        const vals = exps.map(e => parseFloat(e.results[m])).filter(v => !isNaN(v));
+        avgs[m] = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+      });
+      return { group, avgs, count: exps.length };
+    });
+
+    renderGCRadar(groupAvgs, activeMetrics);
+    renderGCBar(groupAvgs, activeMetrics);
+    renderGCTable(groupAvgs, activeMetrics);
+  }
+
+  // Build picker checkboxes
+  picker.innerHTML = '';
+  if (liveGroups.length === 0) {
+    picker.innerHTML = '<p style="color:var(--text-muted);padding:12px">Belum ada grup. Buat grup di halaman tree terlebih dahulu.</p>';
+    content.classList.add('hidden');
+    empty.classList.remove('hidden');
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'gc-picker-grid';
+  liveGroups.forEach(g => {
+    const label = document.createElement('label');
+    label.className = 'gc-picker-item';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = g.id;
+    cb.addEventListener('change', () => {
+      if (cb.checked) {
+        if (selectedGroupIds.size >= 4) { cb.checked = false; return; }
+        selectedGroupIds.add(g.id);
+      } else {
+        selectedGroupIds.delete(g.id);
+      }
+      rebuildCharts();
+    });
+    const dot = document.createElement('span');
+    dot.className = 'gc-color-dot';
+    dot.style.background = g.color;
+    const name = document.createElement('span');
+    name.textContent = g.name;
+    label.appendChild(cb);
+    label.appendChild(dot);
+    label.appendChild(name);
+    grid.appendChild(label);
+  });
+  picker.appendChild(grid);
+
+  rebuildCharts();
+}
+
+function renderGCRadar(groupAvgs, metrics) {
+  const ctx = document.getElementById('gc-radar-chart');
+  if (gcRadarChart) gcRadarChart.destroy();
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+  const textColor = isDark ? '#94a3b8' : '#475569';
+
+  gcRadarChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: metrics.map(m => METRIC_LABELS[m]),
+      datasets: groupAvgs.map(({ group, avgs }) => ({
+        label: `${group.name} (n=${groupAvgs.find(g=>g.group.id===group.id)?.count ?? 0})`,
+        data: metrics.map(m => avgs[m]),
+        borderColor: group.color,
+        backgroundColor: group.color + '22',
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointBackgroundColor: group.color,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: textColor, font: { family: 'Inter', size: 12 }, usePointStyle: true } },
+      },
+      scales: {
+        r: {
+          grid: { color: gridColor }, angleLines: { color: gridColor },
+          pointLabels: { color: textColor, font: { family: 'Inter', size: 11 } },
+          ticks: { color: textColor, backdropColor: 'transparent', font: { size: 10 } },
+          beginAtZero: true,
+        },
+      },
+    },
+  });
+}
+
+function renderGCBar(groupAvgs, metrics) {
+  const ctx = document.getElementById('gc-bar-chart');
+  if (gcBarChart) gcBarChart.destroy();
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+  const textColor = isDark ? '#94a3b8' : '#475569';
+
+  gcBarChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: metrics.map(m => METRIC_LABELS[m]),
+      datasets: groupAvgs.map(({ group, avgs }) => ({
+        label: group.name,
+        data: metrics.map(m => avgs[m]),
+        backgroundColor: group.color + 'CC',
+        borderColor: group.color,
+        borderWidth: 1.5,
+        borderRadius: 4,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: textColor, font: { family: 'Inter', size: 12 }, usePointStyle: true } },
+        tooltip: {
+          backgroundColor: isDark ? 'rgba(24,27,37,0.95)' : 'rgba(255,255,255,0.95)',
+          titleColor: isDark ? '#e2e8f0' : '#1e293b',
+          bodyColor: isDark ? '#94a3b8' : '#475569',
+          callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(4)}` },
+        },
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor, font: { family:'Inter', size:11 } } },
+        y: { grid: { color: gridColor }, ticks: { color: textColor, font: { family:'Inter', size:11 } }, beginAtZero: true },
+      },
+    },
+  });
+}
+
+function renderGCTable(groupAvgs, metrics) {
+  const theadTr = document.getElementById('gc-thead-tr');
+  const tbody = document.getElementById('gc-tbody');
+  theadTr.innerHTML = '';
+  tbody.innerHTML = '';
+
+  const thM = document.createElement('th');
+  thM.textContent = 'Metric';
+  theadTr.appendChild(thM);
+
+  groupAvgs.forEach(({ group }) => {
+    const th = document.createElement('th');
+    th.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${group.color};margin-right:6px;"></span>${group.name}`;
+    theadTr.appendChild(th);
+  });
+
+  metrics.forEach(m => {
+    const tr = document.createElement('tr');
+    const tdName = document.createElement('td');
+    tdName.style.fontWeight = 'bold';
+    tdName.textContent = METRIC_LABELS[m];
+    tr.appendChild(tdName);
+
+    // Find best group for this metric
+    const vals = groupAvgs.map(ga => ga.avgs[m]);
+    const maxVal = Math.max(...vals);
+
+    groupAvgs.forEach(({ avgs }) => {
+      const td = document.createElement('td');
+      const v = avgs[m];
+      td.textContent = v.toFixed(4);
+      if (v === maxVal && maxVal > 0) {
+        td.style.fontWeight = '700';
+        td.style.color = '#10b981';
+      }
       tr.appendChild(td);
     });
 

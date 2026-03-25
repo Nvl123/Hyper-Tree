@@ -1508,3 +1508,193 @@ body {
     transform: translateY(-10px);
   }
 }
+
+/* --- Animations for Group Picker --- */
+@keyframes gpmIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Group Picker Modal ──────────────────────────────── */
+.group-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeInOverlay 0.2s ease-out;
+}
+
+.group-picker-modal {
+  width: 400px;
+  max-width: 90vw;
+  background: var(--modal-bg);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 30px var(--accent-glow);
+  overflow: hidden;
+  animation: gpmIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.group-picker-header {
+  padding: 16px 20px;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-card);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.group-picker-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.group-picker-close:hover {
+  color: var(--danger);
+  transform: scale(1.1);
+}
+
+.gpm-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gpm-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.gpm-item:hover {
+  background: var(--btn-hover-bg);
+  border-color: var(--border-card);
+}
+
+.gpm-active {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+}
+
+.gpm-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(0,0,0,0.2);
+}
+
+.gpm-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.gpm-del {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all 0.2s;
+}
+
+.gpm-item:hover .gpm-del {
+  opacity: 1;
+}
+
+.gpm-del:hover {
+  background: rgba(245, 101, 101, 0.1);
+  color: var(--danger);
+}
+
+.gpm-create {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-card);
+  display: flex;
+  gap: 10px;
+  background: var(--actions-bg);
+}
+
+.gpm-create input[type="text"] {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-card);
+  background: var(--input-focus-bg);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.gpm-create input[type="text"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.gpm-create input[type="color"] {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+}
+
+.gpm-create button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--accent-glow);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.gpm-create button:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.gpm-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
+}
