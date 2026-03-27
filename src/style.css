@@ -248,6 +248,48 @@ html, body {
   justify-content: center;
 }
 
+.toolbar-menu {
+  position: relative;
+}
+
+.toolbar-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 150px;
+  background: var(--toolbar-bg);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 24px var(--shadow-card);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 300;
+}
+
+.toolbar-dropdown-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.toolbar-dropdown-item:hover {
+  background: var(--btn-hover-bg);
+  color: var(--text-primary);
+  border-color: var(--border-glow);
+}
+
 .btn-icon { font-size: 14px; }
 
 .zoom-label {

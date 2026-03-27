@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 
-const STORAGE_KEY = 'hypertree_data';
+const STORAGE_KEY_BASE = 'hypertree_data';
+let STORAGE_KEY = STORAGE_KEY_BASE;
 
 // Default hyperparameters for root nodes
 const DEFAULT_PARAMS = {
@@ -58,6 +59,7 @@ function deepCloneNode(node, isRootClone = true, absoluteOpts = null) {
     children: (node.children || []).map(child => deepCloneNode(child, false))
   };
 }
+
 
 // ─── Public API ───────────────────────────────────────────
 
@@ -241,6 +243,11 @@ export function load() {
     console.warn('Failed to load from localStorage', e);
     treeData = { roots: [], groups: [] };
   }
+}
+
+export function setStorageNamespace(namespace) {
+  const ns = String(namespace || '').trim();
+  STORAGE_KEY = ns ? `${STORAGE_KEY_BASE}_${ns}` : STORAGE_KEY_BASE;
 }
 
 // ─── File Save / Load (File System Access API) ──────────

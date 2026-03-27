@@ -121,6 +121,8 @@ html, body {
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-card);
   transition: background 0.3s, border-color 0.3s;
+  pointer-events: auto;
+  isolation: isolate;
 }
 
 .app-title {
@@ -144,6 +146,14 @@ html, body {
 .toolbar-right {
   position: relative;
   z-index: 1001;
+}
+
+#btn-theme {
+  position: fixed;
+  top: 10px;
+  right: 20px;
+  z-index: 2500;
+  pointer-events: auto;
 }
 
 .toolbar-divider {
@@ -202,6 +212,8 @@ html, body {
   height: calc(100vh - 56px);
   overflow: hidden;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .app-sidebar {
@@ -270,6 +282,8 @@ html, body {
   max-width: 1600px;
   overflow-y: auto;
   min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
 /* ─── Empty State ─────────────────────────────────────── */

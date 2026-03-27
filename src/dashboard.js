@@ -47,7 +47,8 @@ const CHART_COLORS = [
   '#feb2b2', '#90cdf4', '#d6bcfa', '#fbb6ce',
 ];
 
-const STORAGE_KEY = 'hypertree_data';
+const STORAGE_NAMESPACE = new URLSearchParams(window.location.search).get('ws') || '';
+const STORAGE_KEY = STORAGE_NAMESPACE ? `hypertree_data_${STORAGE_NAMESPACE}` : 'hypertree_data';
 
 let lineChart = null, radarChart = null, barChart = null;
 let allExperiments = [];

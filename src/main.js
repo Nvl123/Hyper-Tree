@@ -5,7 +5,8 @@ import {
   updateNode, deleteNode, duplicateNode,
   exportToJSON, importFromJSON,
   getNode, getEffectiveParams, getAllNodes,
-  getGroups, createGroup, deleteGroup, setNodeGroup
+  getGroups, createGroup, deleteGroup, setNodeGroup,
+  setStorageNamespace
 } from './store.js';
 import { initCanvas, renderTree, panToNode } from './tree.js';
 import { initModal, openEditModal, openUniquenessModal, openSimilarityModal } from './modal.js';
@@ -18,6 +19,10 @@ const compareState = {
 };
 
 // ─── Initialize ──────────────────────────────────────────
+
+const urlParams = new URLSearchParams(window.location.search);
+const workspaceId = urlParams.get('ws') || '';
+setStorageNamespace(workspaceId);
 
 load();
 initCanvas();
@@ -37,16 +42,54 @@ document.getElementById('btn-add-root').addEventListener('click', () => {
   render();
 });
 
-document.getElementById('btn-export-csv').addEventListener('click', () => {
-  exportTreeAsCsv();
-});
+const exportMenuBtn = document.getElementById('btn-export-menu');
+const exportMenu = document.getElementById('export-menu');
+const exportCsvBtn = document.getElementById('btn-export-csv');
+const exportPngBtn = document.getElementById('btn-export-png');
 
-document.getElementById('btn-export').addEventListener('click', () => {
-  exportTreeAsPng();
-});
+if (exportMenuBtn && exportMenu) {
+  const closeExportMenu = () => exportMenu.classList.add('hidden');
+
+  exportMenuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    exportMenu.classList.toggle('hidden');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!exportMenu.contains(e.target) && !exportMenuBtn.contains(e.target)) {
+      closeExportMenu();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeExportMenu();
+  });
+}
+
+if (exportCsvBtn) {
+  exportCsvBtn.addEventListener('click', () => {
+    exportTreeAsCsv();
+    if (exportMenu) exportMenu.classList.add('hidden');
+  });
+}
+
+if (exportPngBtn) {
+  exportPngBtn.addEventListener('click', () => {
+    exportTreeAsPng();
+    if (exportMenu) exportMenu.classList.add('hidden');
+  });
+}
 
 document.getElementById('btn-manage-groups-fab').addEventListener('click', () => {
   openGroupPickerModal(null, render);
+});
+
+document.getElementById('btn-new-window').addEventListener('click', () => {
+  const newWs = (window.crypto && window.crypto.randomUUID)
+    ? window.crypto.randomUUID()
+    : `ws_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+  const targetUrl = `${window.location.origin}${window.location.pathname}?ws=${encodeURIComponent(newWs)}`;
+  window.open(targetUrl, '_blank', 'noopener');
 });
 
 // File Save / Load
@@ -58,6 +101,11 @@ document.getElementById('btn-open-file').addEventListener('click', async () => {
   const success = await importFromJSON();
   if (success) render();
 });
+
+const dashboardLink = document.querySelector('a[href="/dashboard.html"]');
+if (dashboardLink && workspaceId) {
+  dashboardLink.href = `/dashboard.html?ws=${encodeURIComponent(workspaceId)}`;
+}
 
 // Search nodes
 let searchMatches = [];

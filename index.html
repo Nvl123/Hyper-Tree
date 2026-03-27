@@ -37,13 +37,23 @@
       <button id="btn-open-file" class="toolbar-btn" title="Open tree from JSON file">
         <span class="btn-icon">📂</span> Open
       </button>
+      <button id="btn-new-window" class="toolbar-btn" title="Open a new browser tab">
+        <span class="btn-icon">🗂️</span> New Tab
+      </button>
       <div class="toolbar-divider"></div>
-      <button id="btn-export-csv" class="toolbar-btn">
-        <span class="btn-icon">📄</span> Export CSV
-      </button>
-      <button id="btn-export" class="toolbar-btn">
-        <span class="btn-icon">📷</span> Export PNG
-      </button>
+      <div class="toolbar-menu">
+        <button id="btn-export-menu" class="toolbar-btn" title="Export options">
+          <span class="btn-icon">📤</span> Export
+        </button>
+        <div id="export-menu" class="toolbar-dropdown hidden">
+          <button id="btn-export-csv" class="toolbar-dropdown-item">
+            <span class="btn-icon">📄</span> Export CSV
+          </button>
+          <button id="btn-export-png" class="toolbar-dropdown-item">
+            <span class="btn-icon">📷</span> Export PNG
+          </button>
+        </div>
+      </div>
       <div class="toolbar-divider"></div>
       <button id="btn-show-sidebar" class="toolbar-btn" title="Toggle parameter sidebar">
         <span class="btn-icon">📦</span> Params
