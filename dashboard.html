@@ -260,47 +260,53 @@
 
     </div> <!-- /#significance-main -->
 
+    <!-- Group Comparison View -->
+    <div id="group-compare-main" class="baseline-main hidden">
+      <div class="baseline-header">
+        <h2><span class="icon">🏷️</span> Perbandingan Grup</h2>
+        <p class="baseline-desc">Bandingkan performa tiap node antar 2–4 grup. Pilih grup di bawah ini.</p>
+      </div>
+
+      <div id="gc-picker" class="gc-picker"></div>
+
+      <div id="gc-content" class="hidden">
+        <div id="gc-podium" class="gc-podium"></div>
+
+        <div class="chart-section baseline-table-container" style="margin-top:24px; margin-bottom:32px;">
+          <h3>📋 Tabel Node Antar Grup</h3>
+          <table id="gc-table" class="results-table">
+            <thead><tr id="gc-thead-tr"></tr></thead>
+            <tbody id="gc-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="charts-row gc-single-row">
+          <div class="chart-section dashboard-section">
+            <h3 class="section-title">📊 Perbandingan Metrik (Bar)</h3>
+            <div class="chart-container">
+              <canvas id="gc-bar-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="charts-row gc-single-row">
+          <div class="chart-section dashboard-section">
+            <h3 class="section-title">📈 Tren Metrik Node (Line Chart)</h3>
+            <div class="chart-container">
+              <canvas id="gc-line-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="gc-empty" class="dashboard-empty" style="padding:48px;">
+        <div class="empty-icon">🏷️</div>
+        <p>Pilih minimal 2 grup di atas untuk melihat perbandingan.</p>
+      </div>
+    </div> <!-- /#group-compare-main -->
+
   </main>
   </div> <!-- /.dashboard-layout -->
-
-  <!-- Group Comparison View -->
-  <div id="group-compare-main" class="baseline-main hidden">
-    <div class="baseline-header">
-      <h2><span class="icon">🏷️</span> Perbandingan Grup</h2>
-      <p class="baseline-desc">Bandingkan rata-rata performa metrik antar 2–4 grup. Pilih grup di bawah ini.</p>
-    </div>
-
-    <div id="gc-picker" class="gc-picker"></div>
-
-    <div id="gc-content" class="hidden">
-      <div class="charts-row">
-        <div class="chart-section dashboard-section">
-          <h3 class="section-title">🕸️ Profil Rata-Rata Grup (Radar)</h3>
-          <div class="chart-container">
-            <canvas id="gc-radar-chart"></canvas>
-          </div>
-        </div>
-        <div class="chart-section dashboard-section">
-          <h3 class="section-title">📊 Perbandingan Metrik (Bar)</h3>
-          <div class="chart-container">
-            <canvas id="gc-bar-chart"></canvas>
-          </div>
-        </div>
-      </div>
-      <div class="chart-section baseline-table-container" style="margin-top:24px;">
-        <h3>📋 Ringkasan: Terbaik per Grup</h3>
-        <table id="gc-table" class="results-table">
-          <thead><tr id="gc-thead-tr"></tr></thead>
-          <tbody id="gc-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div id="gc-empty" class="dashboard-empty" style="padding:48px;">
-      <div class="empty-icon">🏷️</div>
-      <p>Pilih minimal 2 grup di atas untuk melihat perbandingan.</p>
-    </div>
-  </div> <!-- /#group-compare-main -->
 
   <script src="src/dashboard.js" type="module"></script>
 </body>

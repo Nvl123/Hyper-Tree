@@ -61,7 +61,7 @@ let viewMode = 'eval'; // 'eval', 'lossacc', 'correlation', or 'similarity'
 let activePage = 'explore'; // 'explore', 'baseline', 'significance', 'group-compare'
 
 // Group comparison charts
-let gcRadarChart = null;
+let gcLineChart = null;
 let gcBarChart = null;
 
 // ─── Init ────────────────────────────────────────────────
@@ -172,7 +172,15 @@ function applyTheme(theme) {
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme') || 'dark';
   applyTheme(current === 'dark' ? 'light' : 'dark');
-  refreshDashboard();
+  if (activePage === 'group-compare') {
+    renderGroupCompare();
+  } else if (activePage === 'baseline') {
+    renderBaselineComparison(allExperiments);
+  } else if (activePage === 'significance') {
+    renderSignificanceView(allExperiments);
+  } else {
+    refreshDashboard();
+  }
 }
 
 // ─── Toolbar ─────────────────────────────────────────────
@@ -2221,29 +2229,17 @@ function renderGroupCompare() {
     content.classList.remove('hidden');
     empty.classList.add('hidden');
 
-    // Build per-group experiment lists
-    const groupData = chosen.map(g => {
-      const exps = allExperiments.filter(e => e.groupId === g.id && e.results && Object.keys(e.results).length > 0);
-      return { group: g, exps };
-    });
-
     // Active eval metrics (all of METRICS)
     const activeMetrics = METRICS;
 
-    // Compute avg per metric per group
-    const getMetricMax = (m) => m === 'cider' ? 10 : 1;
-    const groupAvgs = groupData.map(({ group, exps }) => {
-      const avgs = {};
-      activeMetrics.forEach(m => {
-        const vals = exps.map(e => parseFloat(e.results[m])).filter(v => !isNaN(v));
-        avgs[m] = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-      });
-      return { group, avgs, count: exps.length };
-    });
+    const selectedExperiments = allExperiments.filter(
+      e => selectedGroupIds.has(e.groupId) && e.results && Object.keys(e.results).length > 0
+    );
 
-    renderGCRadar(groupAvgs, activeMetrics);
-    renderGCBar(groupAvgs, activeMetrics);
-    renderGCTable(groupAvgs, activeMetrics);
+    renderGCPodium(selectedExperiments, activeMetrics, liveGroups);
+    renderGCBar(selectedExperiments, activeMetrics, liveGroups);
+    renderGCLine(selectedExperiments, activeMetrics, liveGroups);
+    renderGCTable(selectedExperiments, activeMetrics, liveGroups);
   }
 
   // Build picker checkboxes
@@ -2287,47 +2283,59 @@ function renderGroupCompare() {
   rebuildCharts();
 }
 
-function renderGCRadar(groupAvgs, metrics) {
-  const ctx = document.getElementById('gc-radar-chart');
-  if (gcRadarChart) gcRadarChart.destroy();
+function renderGCLine(experiments, metrics, groups) {
+  const ctx = document.getElementById('gc-line-chart');
+  if (gcLineChart) gcLineChart.destroy();
+  if (!ctx) return;
+
+  const groupMap = new Map((groups || []).map(g => [g.id, g]));
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
   const textColor = isDark ? '#94a3b8' : '#475569';
 
-  gcRadarChart = new Chart(ctx, {
-    type: 'radar',
+  gcLineChart = new Chart(ctx, {
+    type: 'line',
     data: {
       labels: metrics.map(m => METRIC_LABELS[m]),
-      datasets: groupAvgs.map(({ group, avgs }) => ({
-        label: `${group.name} (n=${groupAvgs.find(g=>g.group.id===group.id)?.count ?? 0})`,
-        data: metrics.map(m => avgs[m]),
-        borderColor: group.color,
-        backgroundColor: group.color + '22',
-        borderWidth: 2.5,
-        pointRadius: 4,
-        pointBackgroundColor: group.color,
-      })),
+      datasets: experiments.map((exp, idx) => {
+        const group = groupMap.get(exp.groupId);
+        const color = group?.color || CHART_COLORS[idx % CHART_COLORS.length];
+        return {
+          label: `${exp.name} [${group?.name || 'Tanpa Grup'}]`,
+          data: metrics.map(m => parseFloat(exp.results[m]) || 0),
+          borderColor: color,
+          backgroundColor: color + '22',
+          borderWidth: 2.5,
+          pointRadius: 4.5,
+          pointHoverRadius: 6,
+          pointBackgroundColor: color,
+          pointBorderColor: isDark ? '#1a1b2e' : '#ffffff',
+          pointBorderWidth: 2,
+          tension: 0.3,
+          fill: false,
+        };
+      }),
     },
     options: {
       responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { position: 'bottom', labels: { color: textColor, font: { family: 'Inter', size: 12 }, usePointStyle: true } },
       },
       scales: {
-        r: {
-          grid: { color: gridColor }, angleLines: { color: gridColor },
-          pointLabels: { color: textColor, font: { family: 'Inter', size: 11 } },
-          ticks: { color: textColor, backdropColor: 'transparent', font: { size: 10 } },
-          beginAtZero: true,
-        },
+        x: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: 'Inter', size: 11 } } },
+        y: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: 'Inter', size: 11 } }, beginAtZero: true },
       },
     },
   });
 }
 
-function renderGCBar(groupAvgs, metrics) {
+function renderGCBar(experiments, metrics, groups) {
   const ctx = document.getElementById('gc-bar-chart');
   if (gcBarChart) gcBarChart.destroy();
+  if (!ctx) return;
+
+  const groupMap = new Map((groups || []).map(g => [g.id, g]));
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
   const textColor = isDark ? '#94a3b8' : '#475569';
@@ -2336,14 +2344,18 @@ function renderGCBar(groupAvgs, metrics) {
     type: 'bar',
     data: {
       labels: metrics.map(m => METRIC_LABELS[m]),
-      datasets: groupAvgs.map(({ group, avgs }) => ({
-        label: group.name,
-        data: metrics.map(m => avgs[m]),
-        backgroundColor: group.color + 'CC',
-        borderColor: group.color,
-        borderWidth: 1.5,
-        borderRadius: 4,
-      })),
+      datasets: experiments.map((exp, idx) => {
+        const group = groupMap.get(exp.groupId);
+        const color = group?.color || CHART_COLORS[idx % CHART_COLORS.length];
+        return {
+          label: `${exp.name} [${group?.name || 'Tanpa Grup'}]`,
+          data: metrics.map(m => parseFloat(exp.results[m]) || 0),
+          backgroundColor: color + 'CC',
+          borderColor: color,
+          borderWidth: 1.5,
+          borderRadius: 4,
+        };
+      }),
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -2365,41 +2377,129 @@ function renderGCBar(groupAvgs, metrics) {
   });
 }
 
-function renderGCTable(groupAvgs, metrics) {
+function renderGCPodium(experiments, metrics, groups) {
+  const podium = document.getElementById('gc-podium');
+  if (!podium) return;
+
+  if (!Array.isArray(experiments) || experiments.length === 0) {
+    podium.innerHTML = '';
+    return;
+  }
+
+  const groupMap = new Map((groups || []).map(g => [g.id, g]));
+  const rankings = {};
+  metrics.forEach((metric) => {
+    const sorted = experiments
+      .map((exp, idx) => ({ idx, val: parseFloat(exp.results[metric]) || 0 }))
+      .sort((a, b) => LOWER_IS_BETTER.has(metric) ? a.val - b.val : b.val - a.val);
+    rankings[metric] = {};
+    sorted.forEach((entry, rank) => { rankings[metric][entry.idx] = rank; });
+  });
+
+  const overall = experiments.map((exp, idx) => {
+    let totalRank = 0;
+    metrics.forEach((metric) => { totalRank += rankings[metric][idx] || 0; });
+    const avgRank = metrics.length > 0 ? totalRank / metrics.length : 0;
+    const group = groupMap.get(exp.groupId);
+    return {
+      exp,
+      group,
+      avgRank,
+      aggregateScore: metrics.length > 0
+        ? metrics.reduce((sum, metric) => sum + (parseFloat(exp.results[metric]) || 0), 0) / metrics.length
+        : 0,
+    };
+  }).sort((a, b) => a.avgRank - b.avgRank);
+
+  const medals = ['🥇', '🥈', '🥉'];
+  const titles = ['Juara 1', 'Juara 2', 'Juara 3'];
+  const top = overall.slice(0, Math.min(3, overall.length));
+
+  podium.innerHTML = top.map((entry, idx) => `
+    <article class="gc-podium-card gc-podium-${idx + 1}">
+      <div class="gc-podium-head">
+        <div class="gc-podium-title">${medals[idx]} ${titles[idx]}</div>
+        <span class="gc-podium-dot" style="background:${entry.group?.color || '#64748b'}"></span>
+      </div>
+      <div class="gc-podium-name">${entry.exp.name}</div>
+      <div class="gc-podium-meta">
+        <span>Grup: <strong>${entry.group?.name || 'Tanpa Grup'}</strong></span>
+        <span>Skor agregat: <strong>${entry.aggregateScore.toFixed(4)}</strong></span>
+        <span>Rata-rata rank: <strong>${entry.avgRank.toFixed(2)}</strong></span>
+      </div>
+    </article>
+  `).join('');
+}
+
+function renderGCTable(experiments, metrics, groups) {
   const theadTr = document.getElementById('gc-thead-tr');
   const tbody = document.getElementById('gc-tbody');
   theadTr.innerHTML = '';
   tbody.innerHTML = '';
 
-  const thM = document.createElement('th');
-  thM.textContent = 'Metric';
-  theadTr.appendChild(thM);
+  theadTr.innerHTML = `
+    <th class="rank-col">#</th>
+    <th>Node</th>
+    ${metrics.map(m => `<th>${METRIC_LABELS[m]}</th>`).join('')}
+  `;
 
-  groupAvgs.forEach(({ group }) => {
-    const th = document.createElement('th');
-    th.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${group.color};margin-right:6px;"></span>${group.name}`;
-    theadTr.appendChild(th);
+  if (!Array.isArray(experiments) || experiments.length === 0) return;
+
+  const groupMap = new Map((groups || []).map(g => [g.id, g]));
+
+  const rankings = {};
+  metrics.forEach((metric) => {
+    const sorted = experiments
+      .map((exp, idx) => ({ idx, val: parseFloat(exp.results[metric]) || 0 }))
+      .sort((a, b) => LOWER_IS_BETTER.has(metric) ? a.val - b.val : b.val - a.val);
+    rankings[metric] = {};
+    sorted.forEach((entry, rank) => { rankings[metric][entry.idx] = rank; });
   });
 
-  metrics.forEach(m => {
+  const overallScores = experiments.map((_, idx) => {
+    let totalRank = 0;
+    metrics.forEach((metric) => { totalRank += rankings[metric][idx] || 0; });
+    return { idx, avgRank: totalRank / metrics.length };
+  }).sort((a, b) => a.avgRank - b.avgRank);
+
+  const medals = ['🥇', '🥈', '🥉'];
+  overallScores.forEach(({ idx }, displayRank) => {
+    const exp = experiments[idx];
     const tr = document.createElement('tr');
-    const tdName = document.createElement('td');
-    tdName.style.fontWeight = 'bold';
-    tdName.textContent = METRIC_LABELS[m];
-    tr.appendChild(tdName);
+    if (displayRank === 0) tr.classList.add('rank-gold');
+    else if (displayRank === 1) tr.classList.add('rank-silver');
+    else if (displayRank === 2) tr.classList.add('rank-bronze');
 
-    // Find best group for this metric
-    const vals = groupAvgs.map(ga => ga.avgs[m]);
-    const maxVal = Math.max(...vals);
+    const rankTd = document.createElement('td');
+    rankTd.className = 'rank-col';
+    rankTd.textContent = displayRank < 3 ? medals[displayRank] : `${displayRank + 1}`;
+    tr.appendChild(rankTd);
 
-    groupAvgs.forEach(({ avgs }) => {
+    const group = groupMap.get(exp.groupId);
+    const groupColor = group?.color || '#64748b';
+    const groupName = group?.name || 'Tanpa Grup';
+
+    const nameTd = document.createElement('td');
+    nameTd.className = 'exp-name gc-node-name';
+    nameTd.innerHTML = `
+      <span class="gc-node-title">${exp.name}</span>
+      <span class="gc-group-tag" style="border-color:${groupColor}; background:${groupColor}22;">${groupName}</span>
+    `;
+    tr.appendChild(nameTd);
+
+    metrics.forEach((metric) => {
       const td = document.createElement('td');
-      const v = avgs[m];
-      td.textContent = v.toFixed(4);
-      if (v === maxVal && maxVal > 0) {
-        td.style.fontWeight = '700';
-        td.style.color = '#10b981';
-      }
+      const rawVal = exp.results[metric];
+      const num = parseFloat(rawVal);
+      const valueSpan = document.createElement('span');
+      valueSpan.textContent = !isNaN(num) ? num.toFixed(4) : (rawVal || '—');
+      td.appendChild(valueSpan);
+
+      const metricRank = rankings[metric][idx];
+      if (metricRank === 0) td.classList.add('metric-best');
+      else if (metricRank === 1) td.classList.add('metric-second');
+      else if (metricRank === 2) td.classList.add('metric-third');
+
       tr.appendChild(td);
     });
 
