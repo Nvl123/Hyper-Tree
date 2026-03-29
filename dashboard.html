@@ -210,10 +210,32 @@
           <label class="vsp-radio">
             <input type="radio" name="sig-mode" value="group" /> Per Grup
           </label>
+          <label class="vsp-radio">
+            <input type="radio" name="sig-mode" value="group-compare" /> Antar Grup
+          </label>
+          <label class="vsp-radio">
+            <input type="radio" name="sig-mode" value="node-compare" /> Node Spesifik
+          </label>
         </div>
         <select id="sig-group-select" class="vsp-select hidden">
           <option value="">— Pilih Grup —</option>
         </select>
+        <div id="sig-group-compare-selectors" class="hidden" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="sig-group-a-select" class="vsp-select">
+            <option value="">— Grup A —</option>
+          </select>
+          <select id="sig-group-b-select" class="vsp-select">
+            <option value="">— Grup B —</option>
+          </select>
+        </div>
+        <div id="sig-node-compare-selectors" class="hidden" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="sig-node-a-select" class="vsp-select">
+            <option value="">— Node A —</option>
+          </select>
+          <select id="sig-node-b-select" class="vsp-select">
+            <option value="">— Node B —</option>
+          </select>
+        </div>
       </div>
 
       <!-- Top 3 Conclusion Cards -->
