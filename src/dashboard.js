@@ -187,6 +187,12 @@ function toggleTheme() {
 // ─── Toolbar ─────────────────────────────────────────────
 
 function setupToolbar() {
+  // Preserve workspace ID for back button
+  const backBtn = document.getElementById('btn-back');
+  if (backBtn && STORAGE_NAMESPACE) {
+    backBtn.href = `/?ws=${encodeURIComponent(STORAGE_NAMESPACE)}`;
+  }
+
   document.getElementById('btn-theme').addEventListener('click', toggleTheme);
 
   document.getElementById('btn-open-file').addEventListener('click', async () => {
@@ -2507,3 +2513,4 @@ function renderGCTable(experiments, metrics, groups) {
     tbody.appendChild(tr);
   });
 }
+
