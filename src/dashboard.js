@@ -341,7 +341,67 @@ function buildFilters() {
   container.innerHTML = '';
 
   // — Experiment selection —
+  // — Group selection —
+  if (allGroups.length > 0) {
+    const groupSection = document.createElement('div');
+    groupSection.className = 'filter-group';
+
+    const groupTitle = document.createElement('div');
+    groupTitle.className = 'filter-title';
+    groupTitle.textContent = '📁 Filter by Group';
+    groupSection.appendChild(groupTitle);
+
+    const groupList = document.createElement('div');
+    groupList.className = 'filter-checklist';
+    groupList.id = 'group-checklist';
+
+    allGroups.forEach((group) => {
+      const label = document.createElement('label');
+      label.className = 'filter-check-item';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.dataset.groupId = group.id;
+
+      // Determine initial state
+      const experimentsInGroup = allExperiments.filter(e => e.groupId === group.id);
+      const selectedInGroup = experimentsInGroup.filter(e => selectedIds.has(e.id));
+
+      if (selectedInGroup.length === experimentsInGroup.length && experimentsInGroup.length > 0) {
+        checkbox.checked = true;
+      } else if (selectedInGroup.length > 0) {
+        checkbox.indeterminate = true;
+      }
+
+      checkbox.addEventListener('change', () => {
+        experimentsInGroup.forEach(exp => {
+          if (checkbox.checked) selectedIds.add(exp.id);
+          else selectedIds.delete(exp.id);
+        });
+        updateCheckboxes();
+        refreshDashboard();
+      });
+
+      const dot = document.createElement('span');
+      dot.className = 'filter-color-dot';
+      dot.style.background = group.color || '#ccc';
+
+      const text = document.createElement('span');
+      text.className = 'filter-check-label';
+      text.textContent = group.name;
+
+      label.appendChild(checkbox);
+      label.appendChild(dot);
+      label.appendChild(text);
+      groupList.appendChild(label);
+    });
+
+    groupSection.appendChild(groupList);
+    container.appendChild(groupSection);
+  }
+
   const expSection = document.createElement('div');
+
   expSection.className = 'filter-group';
 
   const expTitle = document.createElement('div');
@@ -488,10 +548,38 @@ function buildFilters() {
 }
 
 function updateCheckboxes() {
+  // Update experiment checkboxes
   document.querySelectorAll('#exp-checklist input[type="checkbox"]').forEach((cb) => {
     cb.checked = selectedIds.has(cb.dataset.expId);
   });
+
+  // Update group checkboxes
+  document.querySelectorAll('#group-checklist input[type="checkbox"]').forEach((cb) => {
+    const gid = cb.dataset.groupId;
+    const experimentsInGroup = allExperiments.filter(e => e.groupId === gid);
+    const selectedInGroup = experimentsInGroup.filter(e => selectedIds.has(e.id));
+
+    if (selectedInGroup.length === experimentsInGroup.length && experimentsInGroup.length > 0) {
+      cb.checked = true;
+      cb.indeterminate = false;
+    } else if (selectedInGroup.length > 0) {
+      cb.checked = false;
+      cb.indeterminate = true;
+    } else {
+      cb.checked = false;
+      cb.indeterminate = false;
+    }
+  });
 }
+
+
+
+
+
+
+
+
+
 
 // ─── Refresh Dashboard ───────────────────────────────────
 
