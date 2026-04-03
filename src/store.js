@@ -12,8 +12,8 @@ const DEFAULT_PARAMS = {
   dropout: '0.3',
 };
 
-/** @type {{ roots: object[], groups: object[] }} */
-let treeData = { roots: [], groups: [] };
+/** @type {{ roots: object[], groups: object[], areas: object[] }} */
+let treeData = { roots: [], groups: [], areas: [] };
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -236,18 +236,55 @@ export function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       treeData = JSON.parse(raw);
-      // Backward compat: old data may not have groups
+      // Backward compat: old data may not have groups or areas
       if (!Array.isArray(treeData.groups)) treeData.groups = [];
+      if (!Array.isArray(treeData.areas)) treeData.areas = [];
     }
   } catch (e) {
     console.warn('Failed to load from localStorage', e);
-    treeData = { roots: [], groups: [] };
+    treeData = { roots: [], groups: [], areas: [] };
   }
 }
 
 export function setStorageNamespace(namespace) {
   const ns = String(namespace || '').trim();
   STORAGE_KEY = ns ? `${STORAGE_KEY_BASE}_${ns}` : STORAGE_KEY_BASE;
+}
+
+// ─── Areas API ───────────────────────────────────────────
+
+export function getAreas() {
+  return treeData.areas || [];
+}
+
+export function createArea(name, x, y, width = 400, height = 300) {
+  const colors = ['#63b3ed', '#a78bfa', '#f687b3', '#68d391', '#fbd38d', '#fc8181'];
+  const area = {
+    id: uuidv4(),
+    name: name || 'New Area',
+    x: x || 0,
+    y: y || 0,
+    width: width,
+    height: height,
+    color: colors[Math.floor(Math.random() * colors.length)]
+  };
+  if (!Array.isArray(treeData.areas)) treeData.areas = [];
+  treeData.areas.push(area);
+  save();
+  return area;
+}
+
+export function updateArea(id, changes) {
+  const area = (treeData.areas || []).find(a => a.id === id);
+  if (!area) return;
+  Object.assign(area, changes);
+  save();
+}
+
+export function deleteArea(id) {
+  if (!Array.isArray(treeData.areas)) return;
+  treeData.areas = treeData.areas.filter(a => a.id !== id);
+  save();
 }
 
 // ─── File Save / Load (File System Access API) ──────────

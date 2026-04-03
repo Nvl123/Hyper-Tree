@@ -1,5 +1,5 @@
 import { renderNodeCard } from './node.js';
-import { updateNode, save, getRoots, getEffectiveParams, getNode } from './store.js';
+import { updateNode, save, getRoots, getEffectiveParams, getNode, getAreas, createArea, updateArea, deleteArea, getAllNodes } from './store.js';
 
 // Soft, dashboard-matching color palette for shared params
 const PARAM_COLORS = [
@@ -31,12 +31,41 @@ let canvas, svg, treeContainer, zoomLabel;
 // Drag state for node dragging
 let dragState = null;
 
+// Drawing state for Area
+let isDrawingArea = false;
+let drawStartX = 0;
+let drawStartY = 0;
+let tempAreaEl = null;
+
 const nodeResizeObserver = new window.ResizeObserver(() => {
   const roots = getRoots();
   if (roots && roots.length > 0 && !dragState) {
     requestAnimationFrame(() => drawAllConnections(roots));
   }
 });
+
+export function startDrawingArea() {
+  if (isDrawingArea) {
+    cancelDrawingArea();
+    return;
+  }
+  isDrawingArea = true;
+  document.getElementById('canvas-wrapper').style.cursor = 'crosshair';
+  const btn = document.getElementById('btn-add-area');
+  if (btn) btn.classList.add('active-drawing');
+}
+
+export function cancelDrawingArea() {
+  isDrawingArea = false;
+  const wrapper = document.getElementById('canvas-wrapper');
+  if (wrapper) wrapper.style.cursor = '';
+  const btn = document.getElementById('btn-add-area');
+  if (btn) btn.classList.remove('active-drawing');
+  if (tempAreaEl) {
+    tempAreaEl.remove();
+    tempAreaEl = null;
+  }
+}
 
 export function initCanvas() {
   canvas = document.getElementById('canvas');
@@ -48,6 +77,28 @@ export function initCanvas() {
 
   // Pan — Figma/draw.io style: middle-click anywhere, or left-click on non-interactive areas
   wrapper.addEventListener('pointerdown', (e) => {
+    if (isDrawingArea) {
+      if (e.target.closest('button, input, textarea, select, a, .node-actions, .modal-content')) {
+        return; // Don't draw if clicking on interactive elements
+      }
+      e.stopPropagation();
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      drawStartX = (e.clientX - rect.left) / scale;
+      drawStartY = (e.clientY - rect.top) / scale;
+
+      tempAreaEl = document.createElement('div');
+      tempAreaEl.className = 'temp-drawing-area';
+      tempAreaEl.style.left = drawStartX + 'px';
+      tempAreaEl.style.top = drawStartY + 'px';
+      tempAreaEl.style.width = '0px';
+      tempAreaEl.style.height = '0px';
+      
+      const areasContainer = document.getElementById('areas-container');
+      if (areasContainer) areasContainer.appendChild(tempAreaEl);
+      return;
+    }
+
     // Middle mouse button (button 1) → always pan
     if (e.button === 1) {
       e.preventDefault();
@@ -82,6 +133,23 @@ export function initCanvas() {
   });
 
   window.addEventListener('pointermove', (e) => {
+    if (isDrawingArea && tempAreaEl) {
+      const rect = canvas.getBoundingClientRect();
+      const currentX = (e.clientX - rect.left) / scale;
+      const currentY = (e.clientY - rect.top) / scale;
+
+      const x = Math.min(drawStartX, currentX);
+      const y = Math.min(drawStartY, currentY);
+      const w = Math.abs(currentX - drawStartX);
+      const h = Math.abs(currentY - drawStartY);
+
+      tempAreaEl.style.left = x + 'px';
+      tempAreaEl.style.top = y + 'px';
+      tempAreaEl.style.width = w + 'px';
+      tempAreaEl.style.height = h + 'px';
+      return;
+    }
+
     if (dragState) {
       handleDragMove(e);
       return;
@@ -93,6 +161,47 @@ export function initCanvas() {
   });
 
   window.addEventListener('pointerup', (e) => {
+    if (isDrawingArea && tempAreaEl) {
+      isDrawingArea = false;
+      const wrapper = document.getElementById('canvas-wrapper');
+      if (wrapper) wrapper.style.cursor = '';
+      const btn = document.getElementById('btn-add-area');
+      if (btn) btn.classList.remove('active-drawing');
+
+      const w = parseFloat(tempAreaEl.style.width);
+      const h = parseFloat(tempAreaEl.style.height);
+      const x = parseFloat(tempAreaEl.style.left);
+      const y = parseFloat(tempAreaEl.style.top);
+
+      tempAreaEl.remove();
+      tempAreaEl = null;
+
+      if (w > 5 && h > 5) {
+        try {
+          const area = createArea('Area Eksperimen', x, y, w, h);
+          renderTree(getRoots(), currentOnAction);
+          
+          // Auto-focus name input
+          setTimeout(() => {
+            const areaEl = document.querySelector(`.tree-area[data-id="${area.id}"]`);
+            if (areaEl) {
+              const input = areaEl.querySelector('.tree-area-name-input');
+              if (input) {
+                input.focus();
+                input.select();
+              }
+            }
+          }, 50);
+        } catch (err) {
+          alert("Error creating area: " + err.message);
+          console.error(err);
+        }
+      } else {
+         // clicked without dragging much, cancel drawing
+      }
+      return;
+    }
+
     if (dragState) {
       handleDragEnd(e);
       return;
@@ -100,6 +209,12 @@ export function initCanvas() {
     isPanning = false;
     const wrapper = document.getElementById('canvas-wrapper');
     if (wrapper) wrapper.style.cursor = '';
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (isDrawingArea) cancelDrawingArea();
+    }
   });
 
   // Zoom & Pan via touchpad/wheel
@@ -274,6 +389,20 @@ export function renderTree(roots, onAction) {
   treeContainer.innerHTML = '';
   svg.innerHTML = '';
 
+  let areasContainer = document.getElementById('areas-container');
+  if (!areasContainer) {
+    areasContainer = document.createElement('div');
+    areasContainer.id = 'areas-container';
+    canvas.insertBefore(areasContainer, svg);
+  } else {
+    areasContainer.innerHTML = '';
+  }
+
+  const areas = getAreas();
+  areas.forEach(area => {
+    renderArea(area, areasContainer);
+  });
+
   const emptyState = document.getElementById('empty-state');
   if (roots.length === 0) {
     emptyState.classList.remove('hidden');
@@ -295,6 +424,241 @@ export function renderTree(roots, onAction) {
     drawAllConnections(roots);
     highlightSharedParams(roots);
   });
+}
+
+function renderArea(area, container) {
+  const el = document.createElement('div');
+  el.className = 'tree-area';
+  el.dataset.id = area.id;
+  el.style.left = area.x + 'px';
+  el.style.top = area.y + 'px';
+  el.style.width = area.width + 'px';
+  el.style.height = area.height + 'px';
+  el.style.setProperty('--area-color', area.color);
+
+  el.innerHTML = `
+    <div class="tree-area-header">
+      <input type="text" class="tree-area-name-input" value="${area.name}" />
+      <div class="tree-area-actions">
+        <input type="color" class="area-color-picker" value="${area.color || '#63b3ed'}" title="Ubah Warna" />
+        <button class="area-btn-delete" title="Hapus Area">🗑️</button>
+      </div>
+    </div>
+    <div class="tree-area-resize-handle"></div>
+  `;
+
+  container.appendChild(el);
+
+  setupAreaDrag(el, area.id);
+  setupAreaResize(el, area.id);
+
+  el.querySelector('.area-btn-delete').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (confirm(`Hapus area "${area.name}"?`)) {
+      deleteArea(area.id);
+      renderTree(getRoots(), currentOnAction);
+    }
+  });
+
+  const nameInput = el.querySelector('.tree-area-name-input');
+  const colorInput = el.querySelector('.area-color-picker');
+
+  nameInput.addEventListener('pointerdown', (e) => e.stopPropagation());
+  colorInput.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+  const syncAreaNameInputWidth = () => {
+    const minWidthPx = 64;
+    nameInput.style.width = '0px';
+    const contentWidthPx = Math.ceil(nameInput.scrollWidth) + 4;
+    nameInput.style.width = `${Math.max(minWidthPx, contentWidthPx)}px`;
+  };
+
+  syncAreaNameInputWidth();
+
+  nameInput.addEventListener('input', () => {
+    syncAreaNameInputWidth();
+  });
+
+  nameInput.addEventListener('change', (e) => {
+    const normalizedName = e.target.value.trim() || 'Area';
+    e.target.value = normalizedName;
+    updateArea(area.id, { name: normalizedName });
+    syncAreaNameInputWidth();
+  });
+
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') e.target.blur();
+  });
+
+  colorInput.addEventListener('input', (e) => {
+    el.style.setProperty('--area-color', e.target.value);
+    el.querySelector('.tree-area-header').style.borderColor = e.target.value;
+  });
+
+  colorInput.addEventListener('change', (e) => {
+    updateArea(area.id, { color: e.target.value });
+  });
+}
+
+let areaDragState = null;
+
+function setupAreaDrag(el, areaId) {
+  el.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button') || e.target.classList.contains('tree-area-resize-handle')) return;
+    e.stopPropagation();
+    
+    // Find nodes inside this area
+    const areaRect = el.getBoundingClientRect();
+    const allNodes = getAllNodes();
+    const containedNodeIds = [];
+
+    allNodes.forEach(node => {
+      const card = document.querySelector(`.node-card[data-id="${node.id}"]`);
+      if (card) {
+        const cardRect = card.getBoundingClientRect();
+        const cardCenterX = cardRect.left + cardRect.width / 2;
+        const cardCenterY = cardRect.top + cardRect.height / 2;
+
+        if (cardCenterX >= areaRect.left && cardCenterX <= areaRect.right &&
+            cardCenterY >= areaRect.top && cardCenterY <= areaRect.bottom) {
+          containedNodeIds.push(node.id);
+        }
+      }
+    });
+
+    const roots = getRoots();
+    const parentMap = buildParentMap(roots);
+    const containedSet = new Set(containedNodeIds);
+    const topLevelContainedNodeIds = containedNodeIds.filter((id) => {
+      let current = parentMap.get(id);
+      while (current) {
+        if (containedSet.has(current)) return false;
+        current = parentMap.get(current);
+      }
+      return true;
+    });
+
+    areaDragState = {
+      areaId,
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: parseFloat(el.style.left) || 0,
+      origY: parseFloat(el.style.top) || 0,
+      containedNodeIds: topLevelContainedNodeIds,
+      nodeOrigins: topLevelContainedNodeIds.map(id => {
+        const subtree = document.querySelector(`.subtree[data-node-id="${id}"]`);
+        return {
+          id,
+          x: parseFloat(subtree.style.left) || 0,
+          y: parseFloat(subtree.style.top) || 0
+        };
+      })
+    };
+
+    const onPointerMove = (moveEvent) => {
+      if (!areaDragState) return;
+      const dx = (moveEvent.clientX - areaDragState.startX) / scale;
+      const dy = (moveEvent.clientY - areaDragState.startY) / scale;
+
+      el.style.transition = 'none';
+      el.style.left = (areaDragState.origX + dx) + 'px';
+      el.style.top = (areaDragState.origY + dy) + 'px';
+
+      // Move contained nodes
+      areaDragState.nodeOrigins.forEach(origin => {
+        const subtree = document.querySelector(`.subtree[data-node-id="${origin.id}"]`);
+        if (subtree) {
+           subtree.style.transition = 'none';
+           subtree.style.left = (origin.x + dx) + 'px';
+           subtree.style.top = (origin.y + dy) + 'px';
+        }
+      });
+      
+      requestAnimationFrame(() => drawAllConnections(getRoots()));
+    };
+
+    const onPointerUp = () => {
+      if (!areaDragState) return;
+      
+      // Persist Area Position
+      updateArea(areaId, {
+        x: parseFloat(el.style.left),
+        y: parseFloat(el.style.top)
+      });
+
+      // Persist Node Positions
+      areaDragState.containedNodeIds.forEach(id => {
+        const subtree = document.querySelector(`.subtree[data-node-id="${id}"]`);
+        if (subtree) {
+          updateNode(id, {
+            position: {
+              x: parseFloat(subtree.style.left),
+              y: parseFloat(subtree.style.top)
+            }
+          });
+        }
+      });
+
+      save();
+      el.style.transition = '';
+      areaDragState.nodeOrigins.forEach(origin => {
+        const subtree = document.querySelector(`.subtree[data-node-id="${origin.id}"]`);
+        if (subtree) subtree.style.transition = '';
+      });
+
+      areaDragState = null;
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  });
+}
+
+function setupAreaResize(el, areaId) {
+  const handle = el.querySelector('.tree-area-resize-handle');
+  handle.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = parseFloat(el.style.width);
+    const startHeight = parseFloat(el.style.height);
+
+    const onPointerMove = (moveEvent) => {
+      const dx = (moveEvent.clientX - startX) / scale;
+      const dy = (moveEvent.clientY - startY) / scale;
+      el.style.width = Math.max(100, startWidth + dx) + 'px';
+      el.style.height = Math.max(100, startHeight + dy) + 'px';
+    };
+
+    const onPointerUp = () => {
+      updateArea(areaId, {
+        width: parseFloat(el.style.width),
+        height: parseFloat(el.style.height)
+      });
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  });
+}
+
+function buildParentMap(roots) {
+  const parentMap = new Map();
+
+  function walk(node, parentId = null) {
+    parentMap.set(node.id, parentId);
+    if (!node.children?.length) return;
+    node.children.forEach((child) => walk(child, node.id));
+  }
+
+  roots.forEach((root) => walk(root, null));
+  return parentMap;
 }
 
 // ─── Shared Param Highlighting ──────────────────────────

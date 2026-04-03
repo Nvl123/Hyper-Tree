@@ -5,10 +5,11 @@ import {
   updateNode, deleteNode, duplicateNode,
   exportToJSON, importFromJSON,
   getNode, getEffectiveParams, getAllNodes,
-  getGroups, createGroup, deleteGroup, setNodeGroup,
-  setStorageNamespace
+  getGroups, createGroup, deleteGroup, updateGroup, setNodeGroup,
+  setStorageNamespace,
+  createArea
 } from './store.js';
-import { initCanvas, renderTree, panToNode } from './tree.js';
+import { initCanvas, renderTree, panToNode, startDrawingArea } from './tree.js';
 import { initModal, openEditModal, openUniquenessModal, openSimilarityModal, openWelcomeModal } from './modal.js';
 import { exportTreeAsPng, exportTreeAsCsv } from './export.js';
 import { initSidebar } from './sidebar.js';
@@ -128,6 +129,13 @@ if (emptyAddRootBtn) {
   emptyAddRootBtn.addEventListener('click', () => {
     createRootNode();
     render();
+  });
+}
+
+const addAreaBtn = document.getElementById('btn-add-area');
+if (addAreaBtn) {
+  addAreaBtn.addEventListener('click', () => {
+    startDrawingArea();
   });
 }
 
@@ -476,23 +484,39 @@ function openGroupPickerModal(nodeId, onDone) {
       item.className = 'gpm-item' + (isActive ? ' gpm-active' : '');
       item.innerHTML = `
         <span class="gpm-dot" style="background:${grp.color}"></span>
-        <span class="gpm-name">${grp.name}</span>
+        <input type="text" class="gpm-name-input" value="${grp.name}" style="flex:1; border:none; background:transparent; outline:none; font-family:inherit; font-weight:500; font-size:14px; color:inherit; min-width: 50px;" />
         <button class="gpm-del" title="Delete group">🗑</button>
       `;
       if (node) {
         item.addEventListener('click', (e) => {
-          if (e.target.closest('.gpm-del')) return;
+          if (e.target.closest('.gpm-del') || e.target.closest('.gpm-name-input')) return;
           setNodeGroup(nodeId, grp.id);
           close();
         });
       } else {
         item.style.cursor = 'default';
       }
+
+      const nameInput = item.querySelector('.gpm-name-input');
+      nameInput.addEventListener('change', (e) => {
+        const newName = e.target.value.trim();
+        if (newName) {
+          updateGroup(grp.id, { name: newName });
+          render(); // update node badges
+        } else {
+          e.target.value = grp.name;
+        }
+      });
+      nameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') e.target.blur();
+      });
+
       item.querySelector('.gpm-del').addEventListener('click', (e) => {
         e.stopPropagation();
         if (confirm(`Delete group "${grp.name}"? Nodes in this group will be ungrouped.`)) {
           deleteGroup(grp.id);
           renderList();
+          render();
           onDone && onDone();
         }
       });

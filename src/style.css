@@ -540,6 +540,24 @@ html, body {
   box-shadow: 0 6px 20px var(--accent-glow);
 }
 
+#btn-add-area {
+  background: rgba(99, 179, 237, 0.16);
+  color: var(--accent-hover) !important;
+  border: 1px solid rgba(99, 179, 237, 0.35);
+  box-shadow: 0 4px 16px var(--accent-glow);
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 24px;
+}
+
+#btn-add-area:hover {
+  background: rgba(99, 179, 237, 0.26);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+
 .tools-menu-list .toolbar-btn {
   width: 100%;
   justify-content: flex-start;
@@ -2040,4 +2058,162 @@ body {
   color: var(--text-muted);
   font-size: 13px;
   font-style: italic;
+}
+
+/* ─── Node Areas ───────────────────────────────────────── */
+#areas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 1; /* Behind nodes which are z-index: 2+ */
+}
+
+.tree-area {
+  position: absolute;
+  pointer-events: auto;
+  border: 3px dashed var(--area-color);
+  background: color-mix(in srgb, var(--area-color), transparent 92%);
+  border-radius: 16px;
+  min-width: 100px;
+  min-height: 100px;
+  backdrop-filter: blur(4px);
+  transition: box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.tree-area:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  background: color-mix(in srgb, var(--area-color), transparent 88%);
+}
+
+.tree-area-header {
+  position: absolute;
+  top: -36px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px;
+  background: var(--toolbar-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--area-color);
+  border-radius: 20px;
+  white-space: nowrap;
+  cursor: grab;
+  user-select: none;
+}
+
+.tree-area-header:active {
+  cursor: grabbing;
+}
+
+.tree-area-name-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed transparent;
+  color: var(--area-color);
+  font-size: 39px;
+  font-weight: 700;
+  font-family: inherit;
+  padding: 2px 0;
+  width: 6ch;
+  min-width: 6ch;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.tree-area-name-input:focus, .tree-area-name-input:hover {
+  border-bottom-color: var(--area-color);
+}
+
+.area-color-picker {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 0;
+  background: transparent;
+}
+
+.area-color-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.area-color-picker::-webkit-color-swatch {
+  border: none;
+  border-radius: 10px;
+}
+
+.tree-area-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.tree-area-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  font-size: 12px;
+  opacity: 0.6;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.tree-area-actions button:hover {
+  opacity: 1;
+  background: var(--btn-hover-bg);
+}
+
+.tree-area-resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 50%, var(--area-color) 50%);
+  border-radius: 0 0 14px 0;
+  opacity: 0.4;
+}
+
+.tree-area-resize-handle:hover {
+  opacity: 1;
+}
+
+.temp-drawing-area {
+  position: absolute;
+  border: 3px dashed var(--accent);
+  background: var(--accent-glow);
+  z-index: 100;
+  pointer-events: none;
+}
+
+/* ─── Left Floating Toolbar ────────────────────────────── */
+.left-floating-toolbar {
+  position: fixed;
+  left: 20px;
+  top: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 100;
+}
+
+.toolbar-btn.active-drawing {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 0 0 4px var(--accent-glow), 0 4px 16px var(--shadow-card);
+}
+
+#btn-add-area.active-drawing {
+  transform: translateY(-1px);
 }
