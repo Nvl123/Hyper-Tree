@@ -9,7 +9,7 @@ import {
   setStorageNamespace
 } from './store.js';
 import { initCanvas, renderTree, panToNode } from './tree.js';
-import { initModal, openEditModal, openUniquenessModal, openSimilarityModal } from './modal.js';
+import { initModal, openEditModal, openUniquenessModal, openSimilarityModal, openWelcomeModal } from './modal.js';
 import { exportTreeAsPng, exportTreeAsCsv } from './export.js';
 import { initSidebar } from './sidebar.js';
 
@@ -34,6 +34,19 @@ initCompareFeature();
 initUniquenessCheck();
 initSimilarityCheck();
 render();
+
+// ─── Welcome Popup ───────────────────────────────────────
+
+setTimeout(() => {
+  const hasSeenInSession = sessionStorage.getItem('hypertree_welcome_seen');
+  if (!hasSeenInSession) {
+    const hasData = getRoots().length > 0;
+    openWelcomeModal(async () => {
+      const success = await importFromJSON();
+      if (success) render();
+    }, hasData);
+  }
+}, 300);
 
 // ─── Toolbar ─────────────────────────────────────────────
 
@@ -101,6 +114,22 @@ document.getElementById('btn-open-file').addEventListener('click', async () => {
   const success = await importFromJSON();
   if (success) render();
 });
+
+const emptyOpenBtn = document.getElementById('empty-btn-open-file');
+if (emptyOpenBtn) {
+  emptyOpenBtn.addEventListener('click', async () => {
+    const success = await importFromJSON();
+    if (success) render();
+  });
+}
+
+const emptyAddRootBtn = document.getElementById('empty-btn-add-root');
+if (emptyAddRootBtn) {
+  emptyAddRootBtn.addEventListener('click', () => {
+    createRootNode();
+    render();
+  });
+}
 
 const dashboardLink = document.querySelector('a[href="/dashboard.html"]');
 if (dashboardLink && workspaceId) {
@@ -545,26 +574,60 @@ function initToolsMenu() {
   const btnToggle = document.getElementById('btn-tools-toggle');
   const btnClose = document.getElementById('btn-tools-close');
   const menu = document.getElementById('tools-menu');
+  const toggleContainer = document.getElementById('tools-toggle-container');
+  const toolsWrapper = document.querySelector('.tools-wrapper');
 
-  if (btnToggle && btnClose && menu) {
-    btnToggle.addEventListener('click', () => {
-      btnToggle.style.opacity = '0';
-      btnToggle.style.transform = 'scale(0.8)';
-      btnToggle.style.pointerEvents = 'none';
-      menu.style.opacity = '1';
-      menu.style.transform = 'translateY(0) scale(1)';
-      menu.style.pointerEvents = 'auto';
-    });
+  if (!btnToggle || !btnClose || !menu || !toggleContainer || !toolsWrapper) return;
 
-    btnClose.addEventListener('click', () => {
-      menu.style.opacity = '0';
-      menu.style.transform = 'translateY(20px) scale(0.9)';
-      menu.style.pointerEvents = 'none';
-      btnToggle.style.opacity = '1';
-      btnToggle.style.transform = 'scale(1)';
-      btnToggle.style.pointerEvents = 'auto';
+  const setMenuState = (open) => {
+    menu.classList.toggle('active', open);
+    btnToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+
+  const openMenu = () => {
+    setMenuState(true);
+    const firstActionBtn = menu.querySelector('button:not(#btn-tools-close)');
+    firstActionBtn?.focus();
+  };
+
+  const closeMenu = (returnFocus = false) => {
+    setMenuState(false);
+    if (returnFocus) btnToggle.focus();
+  };
+
+  btnToggle.setAttribute('aria-controls', 'tools-menu');
+  btnToggle.setAttribute('aria-expanded', 'false');
+
+  btnToggle.addEventListener('click', () => {
+    const isOpen = menu.classList.contains('active');
+    if (isOpen) {
+      closeMenu(true);
+    } else {
+      openMenu();
+    }
+  });
+
+  btnClose.addEventListener('click', () => {
+    closeMenu(true);
+  });
+
+  menu.querySelectorAll('button:not(#btn-tools-close)').forEach((button) => {
+    button.addEventListener('click', () => {
+      closeMenu(false);
     });
-  }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!menu.classList.contains('active')) return;
+    if (toolsWrapper.contains(e.target)) return;
+    closeMenu(false);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && menu.classList.contains('active')) {
+      closeMenu(true);
+    }
+  });
 }
 
 // ─── Similarity Check ───────────────────────────────────
@@ -588,9 +651,10 @@ function initUniquenessCheck() {
 function initCompareFeature() {
   const toggleBtn = document.getElementById('btn-compare-toggle');
   const clearBtn = document.getElementById('btn-compare-clear');
+  const closeBtn = document.getElementById('btn-compare-close');
   const treeContainer = document.getElementById('tree-container');
 
-  if (!toggleBtn || !clearBtn || !treeContainer) return;
+  if (!toggleBtn || !clearBtn || !closeBtn || !treeContainer) return;
 
   toggleBtn.addEventListener('click', () => {
     compareState.active = !compareState.active;
@@ -599,6 +663,12 @@ function initCompareFeature() {
   });
 
   clearBtn.addEventListener('click', () => {
+    compareState.selectedIds = [];
+    updateCompareUI();
+  });
+
+  closeBtn.addEventListener('click', () => {
+    compareState.active = false;
     compareState.selectedIds = [];
     updateCompareUI();
   });
@@ -612,6 +682,14 @@ function initCompareFeature() {
     if (!nodeId) return;
     toggleCompareNode(nodeId);
     updateCompareUI();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && compareState.active) {
+      compareState.active = false;
+      compareState.selectedIds = [];
+      updateCompareUI();
+    }
   });
 }
 

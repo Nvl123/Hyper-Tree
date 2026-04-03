@@ -83,23 +83,26 @@
 
     <!-- Floating Compare Controls -->
     <div class="floating-compare">
-      <div class="tools-wrapper" style="position: relative; display: flex; flex-direction: column; align-items: flex-start; height: 38px;">
-        <div style="position: absolute; bottom: 0; left: 0; display: flex; gap: 12px; z-index: 10;">
-          <button id="btn-tools-toggle" class="toolbar-btn primary" title="Open Analysis Tools" style="box-shadow: 0 4px 12px rgba(0,0,0,0.2); padding: 8px 16px; font-weight: 600; font-size: 14px; transition: all 0.3s ease; transform-origin: bottom left;">🛠️ Analysis Tools</button>
-          <button id="btn-manage-groups-fab" class="toolbar-btn primary" title="Manage Experiment Groups" style="background: var(--accent); color: white; border: none; box-shadow: 0 4px 12px var(--accent-glow); padding: 8px 16px; font-weight: 600; font-size: 14px; transition: all 0.3s ease; border-radius: 8px;">🏷️ Groups</button>
+      <div class="tools-wrapper">
+        <div id="tools-toggle-container" class="tools-container-toggle">
+          <button id="btn-tools-toggle" class="toolbar-btn primary" title="Open Analysis Tools">🛠️ Analysis Tools</button>
+          <button id="btn-manage-groups-fab" class="toolbar-btn primary" title="Manage Experiment Groups">🏷️ Groups</button>
         </div>
         
-        <div id="tools-menu" style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start; opacity: 0; transform: translateY(20px) scale(0.9); pointer-events: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2); position: absolute; bottom: 0; left: 0; transform-origin: bottom left;">
+        <div id="tools-menu" class="tools-menu-list">
           <button id="btn-check-similarity" class="toolbar-btn" title="Check parameter similarity between nodes">👯 Cek Kemiripan</button>
           <button id="btn-check-uniqueness" class="toolbar-btn" title="Check if nodes have unique hyperparameters">🔍 Cek Unik</button>
           <button id="btn-compare-toggle" class="toolbar-btn" title="Compare two nodes">⚖ Compare 2 Nodes</button>
-          <button id="btn-tools-close" class="toolbar-btn" title="Close Menu" style="color: var(--danger); font-weight: bold;">✕ Tutup Menu</button>
+          <button id="btn-tools-close" class="toolbar-btn" title="Close Menu">✕ Tutup Menu</button>
         </div>
       </div>
       <div id="compare-panel" class="compare-panel hidden">
         <div class="compare-panel-header">
           <span class="compare-panel-title">Hyperparameter Diff</span>
-          <button id="btn-compare-clear" class="toolbar-btn small" title="Clear selection">↺</button>
+          <div class="compare-panel-actions">
+            <button id="btn-compare-clear" class="toolbar-btn small" title="Clear selection">↺</button>
+            <button id="btn-compare-close" class="toolbar-btn small" title="Tutup compare">✕</button>
+          </div>
         </div>
         <div class="compare-selected">
           <span id="compare-node-a">Node A: -</span>
@@ -121,9 +124,19 @@
 
     <!-- Empty state -->
     <div id="empty-state">
-      <div class="empty-icon">🌳</div>
-      <p>No experiments yet.</p>
-      <p class="sub">Click <strong>"+ Add Root Node"</strong> to start building your hyperparameter tree.</p>
+      <div class="empty-card">
+        <div class="empty-icon">🌳</div>
+        <p class="empty-title">Belum ada eksperimen di workspace ini</p>
+        <p class="sub">Mulai dari file JSON yang sudah ada, atau buat root node baru dari nol.</p>
+        <div class="empty-actions">
+          <button id="empty-btn-open-file" class="toolbar-btn primary" type="button">
+            <span class="btn-icon">📂</span> Buka File JSON
+          </button>
+          <button id="empty-btn-add-root" class="toolbar-btn" type="button">
+            <span class="btn-icon">＋</span> Buat Root Node
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Parameter Sidebar -->

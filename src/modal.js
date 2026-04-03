@@ -780,3 +780,79 @@ export function openSimilarityModal() {
   };
   window.setTimeout(() => window.addEventListener('keydown', escHandler), 0);
 }
+
+/**
+ * Open a welcome modal for new users.
+ */
+export function openWelcomeModal(onOpenFile, hasData = false) {
+  const modalEl = document.getElementById('modal');
+  const backdropEl = document.getElementById('modal-backdrop');
+  
+  modalEl.innerHTML = '';
+  modalEl.classList.remove('hidden');
+  backdropEl.classList.remove('hidden');
+
+  const container = document.createElement('div');
+  container.className = 'modal-content welcome-container';
+  container.style.maxWidth = '500px';
+
+  const titleText = hasData ? 'Selamat Datang Kembali!' : 'Selamat Datang di HyperTree!';
+  const subtitleText = hasData 
+    ? 'Anda memiliki eksperimen yang tersimpan di workspace ini. Lanjutkan pengerjaan atau buka file JSON lain.' 
+    : 'Platform interaktif untuk memvisualisasikan, membandingkan, dan mengelola hyperparameter model Machine Learning Anda.';
+  
+  let buttonsHtml = '';
+  if (hasData) {
+    buttonsHtml = `
+      <button id="welcome-btn-open" class="welcome-btn primary">
+        <span class="btn-icon">📂</span> Buka File Lain
+      </button>
+      <button id="welcome-btn-new" class="welcome-btn secondary">
+        <span class="btn-icon">🚀</span> Lanjutkan Pengerjaan
+      </button>
+    `;
+  } else {
+    buttonsHtml = `
+      <button id="welcome-btn-new" class="welcome-btn primary">
+        <span class="btn-icon">🚀</span> Mulai Eksperimen
+      </button>
+    `;
+  }
+
+  container.innerHTML = `
+    <div class="welcome-icon">🌳</div>
+    <h2 class="welcome-title">${titleText}</h2>
+    <p class="welcome-subtitle">${subtitleText}</p>
+    <div class="welcome-cta-group">
+      ${buttonsHtml}
+    </div>
+    <div class="welcome-hint">
+      💡 Tips: Anda dapat menarik <em>(drag)</em> parameter dari sidebar langsung ke dalam kartu.
+    </div>
+  `;
+
+  modalEl.appendChild(container);
+
+  const close = () => {
+    modalEl.classList.add('hidden');
+    backdropEl.classList.add('hidden');
+    sessionStorage.setItem('hypertree_welcome_seen', 'true');
+  };
+
+  const btnOpen = container.querySelector('#welcome-btn-open');
+  if (btnOpen) {
+    btnOpen.addEventListener('click', () => {
+      close();
+      if (typeof onOpenFile === 'function') onOpenFile();
+    });
+  }
+
+  const btnNew = container.querySelector('#welcome-btn-new');
+  if (btnNew) {
+    btnNew.addEventListener('click', () => {
+      close();
+    });
+  }
+
+  backdropEl.onclick = close;
+}
