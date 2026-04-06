@@ -1,5 +1,5 @@
 import { toPng } from 'html-to-image';
-import { getAllNodes, getEffectiveParams, isRootNode } from './store.js';
+import { getAllNodes, getEffectiveParams, getGroups, getParentNode, isRootNode } from './store.js';
 
 /**
  * Export the entire tree canvas to PNG and trigger download.
@@ -65,18 +65,36 @@ export function exportTreeAsCsv() {
   // Create Header Row
   const headers = [
     'Node Name',
+    'Node ID',
     'Node Type',
+    'Group ID',
+    'Group Name',
+    'Parent ID',
+    'Parent Name',
+    'Secondary Parent IDs',
+    'Secondary Parent Names',
+    'Children Count',
+    'Children Names',
     'Parameters Info',
     ...paramKeys,
     ...RESULT_FIELDS.map((f) => f.toUpperCase().replace('_', ' ')),
   ];
 
   const rows = [headers];
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+  const groupById = new Map((getGroups() || []).map((g) => [g.id, g]));
 
   nodes.forEach((node) => {
     const isRoot = isRootNode(node.id);
     const params = getEffectiveParams(node.id) || {};
     const results = node.results || {};
+    const group = node.groupId ? groupById.get(node.groupId) : null;
+    const parent = getParentNode(node.id);
+    const secondaryParentIds = Array.isArray(node.secondaryParentIds) ? node.secondaryParentIds : [];
+    const secondaryParentNames = secondaryParentIds
+      .map((id) => nodeById.get(id)?.name || '')
+      .filter(Boolean);
+    const childrenNames = (node.children || []).map((child) => child.name).filter(Boolean);
 
     // Keterangan parameter format: "param_a = val_a, param_b = val_b"
     const paramInfoStr = Object.entries(params)
@@ -85,7 +103,16 @@ export function exportTreeAsCsv() {
 
     const row = [
       node.name,
+      node.id,
       isRoot ? 'Root' : 'Child',
+      node.groupId || '',
+      group?.name || '',
+      parent?.id || '',
+      parent?.name || '',
+      secondaryParentIds.join(' | '),
+      secondaryParentNames.join(' | '),
+      String((node.children || []).length),
+      childrenNames.join(' | '),
       paramInfoStr
     ];
 
