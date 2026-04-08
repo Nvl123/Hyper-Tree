@@ -156,10 +156,32 @@
           <label class="vsp-radio">
             <input type="radio" name="baseline-mode" value="group" /> Per Grup
           </label>
+          <label class="vsp-radio">
+            <input type="radio" name="baseline-mode" value="group-compare" /> Antar Grup
+          </label>
+          <label class="vsp-radio">
+            <input type="radio" name="baseline-mode" value="node-compare" /> Node Spesifik
+          </label>
         </div>
         <select id="baseline-group-select" class="vsp-select hidden">
           <option value="">— Pilih Grup —</option>
         </select>
+        <div id="baseline-group-compare-selectors" class="hidden" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="baseline-group-a-select" class="vsp-select">
+            <option value="">— Grup A —</option>
+          </select>
+          <select id="baseline-group-b-select" class="vsp-select">
+            <option value="">— Grup B —</option>
+          </select>
+        </div>
+        <div id="baseline-node-compare-selectors" class="hidden" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="baseline-node-a-select" class="vsp-select">
+            <option value="">— Node A —</option>
+          </select>
+          <select id="baseline-node-b-select" class="vsp-select">
+            <option value="">— Node B —</option>
+          </select>
+        </div>
       </div>
 
       <div class="chart-section baseline-table-container">

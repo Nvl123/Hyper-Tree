@@ -54,6 +54,24 @@ export function exportTreeAsCsv() {
     'loss', 'accuracy',
   ];
 
+  function getResultValue(results, field) {
+    if (!results || typeof results !== 'object') return '';
+    const candidates = [
+      field,
+      field.toLowerCase(),
+      field.toUpperCase(),
+      field.replace(/_/g, ''),
+      field.replace(/_/g, '-'),
+      field.replace(/_/g, ' '),
+    ];
+    for (const key of candidates) {
+      if (Object.prototype.hasOwnProperty.call(results, key)) {
+        return results[key];
+      }
+    }
+    return '';
+  }
+
   // Gather all unique hyperparameters keys
   const allParamKeys = new Set();
   nodes.forEach((node) => {
@@ -75,6 +93,7 @@ export function exportTreeAsCsv() {
     'Secondary Parent Names',
     'Children Count',
     'Children Names',
+    'Results Info',
     'Parameters Info',
     ...paramKeys,
     ...RESULT_FIELDS.map((f) => f.toUpperCase().replace('_', ' ')),
@@ -100,6 +119,13 @@ export function exportTreeAsCsv() {
     const paramInfoStr = Object.entries(params)
       .map(([k, v]) => `${k} = ${v}`)
       .join(' | ');
+    const resultInfoStr = RESULT_FIELDS
+      .map((field) => {
+        const val = getResultValue(results, field);
+        return (val !== undefined && val !== null && val !== '') ? `${field} = ${val}` : '';
+      })
+      .filter(Boolean)
+      .join(' | ');
 
     const row = [
       node.name,
@@ -113,6 +139,7 @@ export function exportTreeAsCsv() {
       secondaryParentNames.join(' | '),
       String((node.children || []).length),
       childrenNames.join(' | '),
+      resultInfoStr,
       paramInfoStr
     ];
 
@@ -123,7 +150,7 @@ export function exportTreeAsCsv() {
 
     // Add result columns
     RESULT_FIELDS.forEach((field) => {
-      const val = results[field];
+      const val = getResultValue(results, field);
       row.push(val !== undefined && val !== null && val !== '' ? String(val).replace('.', ',') : '');
     });
 
